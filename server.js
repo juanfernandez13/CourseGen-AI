@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { processMatriz } = require('./parser');
 const { generateMBZ } = require('./mbzGenerator');
+const { jsonrepair } = require('jsonrepair');
 
 const GEMINI_KEY = process.env.GEMINI_KEY;
 
@@ -63,7 +64,7 @@ app.post('/convert', uploadFields, async (req, res) => {
       try {
         const allQuizzes = await extractAllQuizzes(quizFiles.map(f => f.path), GEMINI_KEY);
         let quizIdx = 0;
-        for (const aula of matrizData.aulas) {
+        for (const aula of (matrizData.aulas || [])) {
           if (aula.quiz && quizIdx < allQuizzes.length) {
             aula.quiz.questoes = allQuizzes[quizIdx].questoes || [];
             console.log(`  ✅ Quiz ${quizIdx + 1}: ${aula.quiz.questoes.length} questões`);
@@ -88,7 +89,7 @@ app.post('/convert', uploadFields, async (req, res) => {
       }
     }
     let tarefaCounter = 0;
-    for (const aula of matrizData.aulas) {
+    for (const aula of (matrizData.aulas || [])) {
       if (aula.tarefa) {
         tarefaCounter++;
         if (tarefaFilesMap[tarefaCounter]) aula.tarefa.arquivos = tarefaFilesMap[tarefaCounter];
@@ -236,6 +237,7 @@ Regras:
 - Datas: extraia do cronograma/calendário. Use null se não encontrar.
 - "livro_de_notas": extraia os pesos das categorias do sistema de avaliação. Use 40/60 como padrão IFCE se não especificado.
 - Notas: extraia os pontos de cada atividade. Use 10 como padrão.
+- IMPORTANTE: nos valores string do JSON, nunca use aspas duplas. Se precisar enfatizar uma palavra, use asteriscos (*palavra*) ou escreva sem marcação. Aspas duplas dentro de strings quebram o JSON.
 
 Matriz DE:
 `;
@@ -262,11 +264,13 @@ async function geminiGenerate(ai, prompt, maxRetries = 5) {
         }
       } catch (_) {}
 
-      const is429 = body.includes('429') || body.includes('RESOURCE_EXHAUSTED') || body.includes('quota');
-      if (!is429 || attempt === maxRetries) throw err;
+      const isRetryable = body.includes('429') || body.includes('RESOURCE_EXHAUSTED') || body.includes('quota')
+                       || body.includes('503') || body.includes('UNAVAILABLE');
+      if (!isRetryable || attempt === maxRetries) throw err;
 
+      if (body.includes('503') || body.includes('UNAVAILABLE')) waitMs = 30000; // 503 → espera 30s
       const waitSec = Math.ceil(waitMs / 1000);
-      console.warn(`  ⏳ Rate limit atingido. Aguardando ${waitSec}s antes de tentar novamente (tentativa ${attempt}/${maxRetries})...`);
+      console.warn(`  ⏳ Gemini indisponível (${body.includes('503') || body.includes('UNAVAILABLE') ? '503' : '429'}). Aguardando ${waitSec}s (tentativa ${attempt}/${maxRetries})...`);
       await new Promise(r => setTimeout(r, waitMs));
     }
   }
@@ -390,13 +394,66 @@ function cleanJSON(text) {
   // Remove trailing commas before } or ]
   s = s.replace(/,\s*([}\]])/g, '$1');
 
+  // Escape unescaped double-quotes inside string values.
+  // Strategy: rebuild the string char-by-char tracking whether we're inside a JSON string.
+  s = escapeInnerQuotes(s);
+
   return s;
+}
+
+function escapeInnerQuotes(s) {
+  let out = '';
+  let inString = false;
+  let i = 0;
+  while (i < s.length) {
+    const ch = s[i];
+    if (ch === '\\' && inString) {
+      out += ch + (s[i + 1] || '');
+      i += 2;
+      continue;
+    }
+    if (ch === '"') {
+      if (!inString) {
+        inString = true;
+        out += ch;
+        i++;
+        continue;
+      }
+      // We're inside a string. Check if this " is a legitimate closing quote:
+      // a closing " is followed (after optional whitespace) by : , } ] or end.
+      let j = i + 1;
+      while (j < s.length && (s[j] === ' ' || s[j] === '\t' || s[j] === '\r' || s[j] === '\n')) j++;
+      const next = s[j];
+      if (next === ':' || next === ',' || next === '}' || next === ']' || j >= s.length) {
+        // Legitimate closing quote
+        inString = false;
+        out += ch;
+      } else {
+        // Unescaped inner quote — escape it
+        out += '\\"';
+      }
+      i++;
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
 }
 
 function safeParseJSON(json, label) {
   try {
     return JSON.parse(json);
   } catch (e) {
+    // Tenta reparar automaticamente (aspas não-escapadas, vírgulas extras, etc.)
+    try {
+      const repaired = jsonrepair(json);
+      console.warn(`  ⚠️ JSON (${label}) reparado automaticamente`);
+      return JSON.parse(repaired);
+    } catch (repairErr) {
+      console.warn(`  ⚠️ jsonrepair também falhou (${label}): ${repairErr.message}`);
+    }
+
     const pos = parseInt((e.message.match(/position (\d+)/) || [])[1]) || 0;
     const snippet = json.slice(Math.max(0, pos - 80), pos + 80);
     console.error(`❌ JSON inválido (${label}) na posição ${pos}:\n...${snippet}...`);
@@ -453,7 +510,7 @@ app.listen(PORT, () => {
 
         // Attach questions to quizzes in order (quiz_1 → 1st aula with quiz, etc.)
         let quizCounter = 0;
-        for (const aula of matrizData.aulas) {
+        for (const aula of (matrizData.aulas || [])) {
           if (aula.quiz) {
             quizCounter++;
             if (quizQuestoes[quizCounter]) {
@@ -478,7 +535,7 @@ app.listen(PORT, () => {
           console.log('ℹ️  Pasta tarefas/ não encontrada — sem arquivos de tarefa');
         }
         let tarefaCounter = 0;
-        for (const aula of matrizData.aulas) {
+        for (const aula of (matrizData.aulas || [])) {
           if (aula.tarefa) {
             tarefaCounter++;
             if (tarefaFilesMap[tarefaCounter]) {
