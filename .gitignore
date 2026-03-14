@@ -1,0 +1,11 @@
+/node_modules
+/quizzes
+/tarefas
+/uploads
+*.mbz
+*.doc
+*.docx
+*.pdf
+yarn.lock
+.env
+.claude
