@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -10,7 +11,9 @@ const { jsonrepair } = require('jsonrepair');
 const GEMINI_KEY = process.env.GEMINI_KEY;
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3001;
+
+app.use(cors());
 
 const DOCX_EXTS   = new Set(['.docx', '.doc']);
 const TAREFA_EXTS = new Set(['.docx', '.doc', '.pdf', '.xlsx', '.xls', '.pptx', '.ppt', '.png', '.jpg', '.jpeg', '.zip']);
@@ -114,19 +117,45 @@ app.post('/convert', uploadFields, async (req, res) => {
   }
 });
 
-// Rota de preview: retorna JSON sem gerar .mbz
+// Rota de preview: retorna JSON (com questões de quizzes se enviados)
 app.post('/preview', uploadFields, async (req, res) => {
   const matrizFile = req.files?.matriz?.[0];
   if (!matrizFile) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
   if (!GEMINI_KEY) return res.status(500).json({ error: 'GEMINI_KEY não configurada no .env' });
 
+  const quizFiles = (req.files?.quizzes || []).sort((a, b) => {
+    const na = parseInt((a.originalname.match(/(\d+)/) || [0, 0])[1]);
+    const nb = parseInt((b.originalname.match(/(\d+)/) || [0, 0])[1]);
+    return na - nb;
+  });
+
   try {
     const fullText = await processMatriz(matrizFile.path);
     const matrizData = await extractDataWithGemini(fullText, GEMINI_KEY);
     fs.unlink(matrizFile.path, () => {});
+
+    // Attach quiz questions if quiz files were uploaded
+    if (quizFiles.length > 0) {
+      try {
+        const allQuizzes = await extractAllQuizzes(quizFiles.map(f => f.path), GEMINI_KEY);
+        let quizIdx = 0;
+        for (const aula of (matrizData.aulas || [])) {
+          if (aula.quiz && quizIdx < allQuizzes.length) {
+            aula.quiz.questoes = allQuizzes[quizIdx].questoes || [];
+            quizIdx++;
+          }
+        }
+      } catch (e) {
+        console.warn(`  ⚠️ Erro ao processar quizzes no preview: ${e.message}`);
+      } finally {
+        quizFiles.forEach(f => fs.unlink(f.path, () => {}));
+      }
+    }
+
     res.json({ success: true, data: matrizData });
   } catch (error) {
     fs.unlink(matrizFile.path, () => {});
+    quizFiles.forEach(f => fs.unlink(f.path, () => {}));
     res.status(500).json({ error: error.message });
   }
 });
@@ -461,14 +490,89 @@ function safeParseJSON(json, label) {
   }
 }
 
+// Rota: gera .mbz a partir de JSON editado + arquivos de quiz/tarefa
+app.post('/generate', uploadFields, async (req, res) => {
+  if (!req.body.matrizJson) return res.status(400).json({ error: 'matrizJson não enviado.' });
+
+  let matrizData;
+  try {
+    matrizData = JSON.parse(req.body.matrizJson);
+  } catch (e) {
+    return res.status(400).json({ error: `JSON inválido: ${e.message}` });
+  }
+
+  const quizFiles = (req.files?.quizzes || []).sort((a, b) => {
+    const na = parseInt((a.originalname.match(/(\d+)/) || [0, 0])[1]);
+    const nb = parseInt((b.originalname.match(/(\d+)/) || [0, 0])[1]);
+    return na - nb;
+  });
+
+  try {
+    // Attach quiz questions
+    if (quizFiles.length > 0) {
+      console.log(`📝 Processando ${quizFiles.length} quiz(zes)...`);
+      try {
+        const allQuizzes = await extractAllQuizzes(quizFiles.map(f => f.path), GEMINI_KEY);
+        let quizIdx = 0;
+        for (const aula of (matrizData.aulas || [])) {
+          if (aula.quiz && quizIdx < allQuizzes.length) {
+            aula.quiz.questoes = allQuizzes[quizIdx].questoes || [];
+            quizIdx++;
+          }
+        }
+      } catch (e) {
+        console.warn(`  ⚠️ Erro ao processar quizzes: ${e.message}`);
+      } finally {
+        quizFiles.forEach(f => fs.unlink(f.path, () => {}));
+      }
+    }
+
+    // Attach tarefa files
+    const tarefaFilesMap = {};
+    for (const file of (req.files?.tarefas || [])) {
+      const match = file.originalname.match(/tarefa[_-]?(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1]);
+        if (!tarefaFilesMap[num]) tarefaFilesMap[num] = [];
+        tarefaFilesMap[num].push({ filePath: file.path, filename: file.originalname });
+      }
+    }
+    let tarefaCounter = 0;
+    for (const aula of (matrizData.aulas || [])) {
+      if (aula.tarefa) {
+        tarefaCounter++;
+        if (tarefaFilesMap[tarefaCounter]) aula.tarefa.arquivos = tarefaFilesMap[tarefaCounter];
+      }
+    }
+
+    console.log('📦 Gerando arquivo .mbz...');
+    const mbzPath = await generateMBZ(matrizData);
+    const filename = `curso_${matrizData.disciplina?.codigo || 'moodle'}.mbz`;
+
+    res.download(mbzPath, filename, () => {
+      fs.unlink(mbzPath, () => {});
+    });
+  } catch (error) {
+    console.error('❌ Erro ao gerar MBZ:', error.message);
+    res.status(500).json({ error: error.message });
+  } finally {
+    // Garante limpeza dos arquivos de tarefa em qualquer caso
+    for (const files of Object.values(tarefaFilesMap ?? {}))
+      files.forEach(f => fs.unlink(f.filePath, () => {}));
+  }
+});
+
 // Cria pasta de uploads se não existir
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 
 app.listen(PORT, () => {
   console.log(`\n🎓 Matriz DE → Moodle converter`);
-  console.log(`🌐 Acesse: http://localhost:${PORT}\n`);
+  console.log(`🌐 API: http://localhost:${PORT}\n`);
 
   // Modo CLI: processa matriz.docx automaticamente se existir na pasta do projeto
+  // (desativado quando rodando junto com a UI — use `node cli.js` para modo CLI)
+  if (process.env.CLI_MODE !== '1') return;
+
   const cliFile = path.resolve('matriz.docx');
   if (fs.existsSync(cliFile)) {
     console.log('📂 matriz.docx detectada — iniciando conversão automática...');

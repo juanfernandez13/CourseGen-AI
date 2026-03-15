@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+/* ─── IFCE Dark Theme (default) ─────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  --bg:             #0c1c12;
+  --surface:        #14271a;
+  --card:           #1c3424;
+  --border:         #2a4a35;
+  --border-subtle:  #1e3828;
+
+  --text-1: #e6f4eb;
+  --text-2: #8db89b;
+  --text-3: #607d6c;
+  --text-4: #3d5447;
+
+  --primary:       #00b865;
+  --primary-hover: #00d478;
+  --primary-dim:   #0d2e1a;
+  --primary-ring:  rgba(0, 184, 101, 0.25);
+  --primary-text:  #ffffff;
+
+  --quiz:        #a78bfa;
+  --quiz-dim:    #1e1630;
+  --quiz-border: #3b2d6a;
+
+  --tarefa:        #34d399;
+  --tarefa-dim:    #0d2520;
+  --tarefa-border: #1e5040;
+
+  --forum:        #60a5fa;
+  --forum-dim:    #0d1e30;
+  --forum-border: #1e3d6a;
+
+  --error:        #f87171;
+  --error-dim:    #2a1010;
+  --error-border: #5a2020;
+  --error-text:   #fca5a5;
+
+  --header-bg:     #071410;
+  --header-border: #162a1c;
+  --header-text:   #e6f4eb;
+  --header-sub:    #547a61;
+
+  --step-bg-active: #00b865;
+  --step-bg-idle:   #1c3424;
+  --step-text-active: #ffffff;
+  --step-text-idle:   #8db89b;
+  --step-border-active: #00b865;
+  --step-border-idle:   #2a4a35;
+  --step-line-done: #00b865;
+  --step-line-idle: #1c3424;
+  --step-label-active: #e6f4eb;
+  --step-label-idle:   #607d6c;
+  --step-shadow: 0 0 0 3px rgba(0, 184, 101, 0.22);
+}
+
+/* ─── IFCE Light Theme ───────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg:             #f0faf4;
+  --surface:        #ffffff;
+  --card:           #e8f5ee;
+  --border:         #b8d9c4;
+  --border-subtle:  #d4eddc;
+
+  --text-1: #0a1f10;
+  --text-2: #255c38;
+  --text-3: #4a7a5a;
+  --text-4: #8ab89a;
+
+  --primary:       #006633;
+  --primary-hover: #00843f;
+  --primary-dim:   #d4eddc;
+  --primary-ring:  rgba(0, 102, 51, 0.22);
+  --primary-text:  #ffffff;
+
+  --quiz:        #6d28d9;
+  --quiz-dim:    #ede9fe;
+  --quiz-border: #c4b5fd;
+
+  --tarefa:        #047857;
+  --tarefa-dim:    #d1fae5;
+  --tarefa-border: #6ee7b7;
+
+  --forum:        #1d4ed8;
+  --forum-dim:    #dbeafe;
+  --forum-border: #93c5fd;
+
+  --error:        #dc2626;
+  --error-dim:    #fee2e2;
+  --error-border: #fca5a5;
+  --error-text:   #991b1b;
+
+  --header-bg:     #006633;
+  --header-border: #004d26;
+  --header-text:   #ffffff;
+  --header-sub:    rgba(255, 255, 255, 0.65);
+
+  --step-bg-active:     #006633;
+  --step-bg-idle:       #d4eddc;
+  --step-text-active:   #ffffff;
+  --step-text-idle:     #255c38;
+  --step-border-active: #006633;
+  --step-border-idle:   #b8d9c4;
+  --step-line-done:     #006633;
+  --step-line-idle:     #b8d9c4;
+  --step-label-active:  #0a1f10;
+  --step-label-idle:    #4a7a5a;
+  --step-shadow: 0 0 0 3px rgba(0, 102, 51, 0.20);
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  background-color: var(--bg);
+  color: var(--text-1);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+::selection {
+  background: var(--primary-dim);
+  color: var(--text-1);
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--bg); }
+::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
