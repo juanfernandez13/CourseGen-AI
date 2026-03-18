@@ -1,7 +1,19 @@
 'use client';
 
 import { useRef, useState, DragEvent, ChangeEvent } from 'react';
-import { extractJson } from '../lib/api';
+import { extractJson, extractQuizzes } from '../lib/api';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mergeQuizQuestions(data: any, quizzes: { questoes: unknown[] }[]) {
+  let idx = 0;
+  for (const aula of (data.aulas || [])) {
+    if (aula.quiz && idx < quizzes.length) {
+      aula.quiz.questoes = quizzes[idx].questoes || [];
+      idx++;
+    }
+  }
+  return data;
+}
 
 type Props = {
   matrizFile: File | null;
@@ -176,6 +188,7 @@ export default function UploadStep({
     setLoading(true);
     setError(null);
     try {
+      // /api/preview já extrai quizzes junto com a matriz numa única chamada
       const data = await extractJson(matrizFile, quizFiles);
       onExtracted(JSON.stringify(data, null, 2));
     } catch (err: unknown) {
@@ -183,6 +196,32 @@ export default function UploadStep({
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleUseJson() {
+    if (!manualJson.trim()) return;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(manualJson);
+    } catch {
+      setError('JSON inválido. Verifique o conteúdo colado.');
+      return;
+    }
+    if (quizFiles.length > 0) {
+      setLoading(true);
+      setError(null);
+      try {
+        const quizzes = await extractQuizzes(quizFiles);
+        parsed = mergeQuizQuestions(parsed, quizzes);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Erro ao extrair questões dos quizzes.');
+        setLoading(false);
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+    onExtracted(JSON.stringify(parsed, null, 2));
   }
 
   const canExtract = !!matrizFile && !loading;
@@ -304,8 +343,9 @@ export default function UploadStep({
       )}
 
       {/* JSON manual panel */}
-      {showJsonPanel && (
-        <div className="flex flex-col gap-3 rounded-xl p-4"
+      <div style={{ display: 'grid', gridTemplateRows: showJsonPanel ? '1fr' : '0fr', transition: 'grid-template-rows 300ms ease' }}>
+      <div style={{ overflow: 'hidden' }}>
+        <div className="flex flex-col gap-3 rounded-xl p-4 mb-6"
           style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>
@@ -365,31 +405,27 @@ export default function UploadStep({
 
           <div className="flex justify-end">
             <button
-              onClick={() => {
-                if (!manualJson.trim()) return;
-                try {
-                  JSON.parse(manualJson); // validate
-                  onExtracted(manualJson.trim());
-                } catch {
-                  setError('JSON inválido. Verifique o conteúdo colado.');
-                }
-              }}
-              disabled={!manualJson.trim()}
+              onClick={handleUseJson}
+              disabled={!manualJson.trim() || loading}
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold"
               style={{
-                background: manualJson.trim() ? 'var(--primary)' : 'var(--surface)',
-                color:      manualJson.trim() ? 'var(--primary-text)' : 'var(--text-4)',
-                cursor:     manualJson.trim() ? 'pointer' : 'not-allowed',
+                background: manualJson.trim() && !loading ? 'var(--primary)' : 'var(--surface)',
+                color:      manualJson.trim() && !loading ? 'var(--primary-text)' : 'var(--text-4)',
+                cursor:     manualJson.trim() && !loading ? 'pointer' : 'not-allowed',
                 border: '1px solid transparent',
               }}>
-              Usar este JSON
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              {loading && quizFiles.length > 0 ? <Spinner /> : null}
+              {loading && quizFiles.length > 0 ? 'Extraindo questões...' : 'Usar este JSON'}
+              {!(loading && quizFiles.length > 0) && (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              )}
             </button>
           </div>
         </div>
-      )}
+      </div>
+      </div>
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* Toggle JSON manual panel */}

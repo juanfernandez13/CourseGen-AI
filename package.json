@@ -4,10 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "cli": "node cli.js",
-    "dev:server": "node server.js",
-    "dev:ui": "cd ui && npm run dev",
-    "dev": "concurrently -n API,UI -c cyan,magenta \"npm run dev:server\" \"npm run dev:ui\""
+    "dev": "cd ui && yarn dev",
+    "server": "node server.js",
+    "generate": "node generateMBZ.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

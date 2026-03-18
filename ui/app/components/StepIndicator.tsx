@@ -51,8 +51,7 @@ export default function StepIndicator({ currentStep, onNavigate }: Props) {
                 style={{
                   color:  active ? 'var(--step-label-active)' : clickable ? 'var(--primary)' : 'var(--step-label-idle)',
                   cursor: clickable ? 'pointer' : 'default',
-                  textDecoration: clickable ? 'underline' : 'none',
-                  textDecorationColor: 'var(--primary)',
+                  textDecoration: clickable ? 'underline var(--primary)' : 'none',
                 }}
                 onClick={() => clickable && onNavigate(step.number)}
               >

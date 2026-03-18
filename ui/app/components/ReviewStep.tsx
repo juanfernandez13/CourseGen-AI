@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FileViewer from './FileViewer';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
+type QuestaoItem = { texto: string; isCorrect?: boolean; resposta?: string };
 type Questao = {
+  tipo?: string;
   enunciado?: string;
-  alternativas?: string[];
-  resposta_correta?: number | string;
+  pontuacao?: number;
+  itens?: QuestaoItem[];
+  feedback?: string;
 };
 type ActivityBase = { titulo?: string; descricao?: string; nota?: number; data_inicio?: string | null; data_fim?: string | null };
 type Quiz   = ActivityBase & { questoes?: Questao[] };
@@ -113,6 +116,12 @@ function QuizAccordion({ questoes }: { questoes: Questao[] }) {
               <p className="flex-1 text-xs font-medium leading-snug" style={{ color: 'var(--text-1)' }}>
                 {q.enunciado ?? '—'}
               </p>
+              {q.pontuacao != null && (
+                <span className="text-xs shrink-0 px-1.5 py-0.5 rounded-md"
+                  style={{ background: 'var(--primary-dim)', color: 'var(--primary)' }}>
+                  {q.pontuacao}pt
+                </span>
+              )}
               <svg
                 width="14" height="14" viewBox="0 0 24 24" fill="none"
                 className="shrink-0 transition-transform duration-200"
@@ -122,35 +131,44 @@ function QuizAccordion({ questoes }: { questoes: Questao[] }) {
               </svg>
             </button>
 
-            {/* Alternatives (expanded) */}
-            {isOpen && (
-              <div className="flex flex-col gap-1 px-3 pb-3">
-                {(q.alternativas ?? []).map((alt, ai) => {
-                  const isCorrect =
-                    q.resposta_correta !== undefined &&
-                    (String(q.resposta_correta).toUpperCase() === letra(ai) ||
-                     Number(q.resposta_correta) === ai ||
-                     String(q.resposta_correta) === String(ai));
-                  return (
-                    <div key={ai} className="flex items-start gap-2 text-xs px-2 py-1.5 rounded-lg"
-                      style={{
-                        background: isCorrect ? 'var(--tarefa-dim)' : 'var(--card)',
-                        border:     isCorrect ? '1px solid var(--tarefa-border)' : '1px solid transparent',
-                      }}>
-                      <span className="font-bold shrink-0 w-4" style={{ color: isCorrect ? 'var(--tarefa)' : 'var(--text-3)' }}>
-                        {letra(ai)})
-                      </span>
-                      <span style={{ color: isCorrect ? 'var(--tarefa)' : 'var(--text-2)' }}>{alt}</span>
-                      {isCorrect && (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="ml-auto shrink-0 mt-0.5">
-                          <path d="M5 12l5 5L19 7" stroke="var(--tarefa)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </div>
-                  );
-                })}
+            {/* Alternatives (animated expand) */}
+            <div style={{ display: 'grid', gridTemplateRows: isOpen ? '1fr' : '0fr', transition: 'grid-template-rows 300ms ease' }}>
+              <div style={{ overflow: 'hidden' }}>
+                <div className="flex flex-col gap-1 px-3 pb-3">
+                  {q.tipo === 'dissertativa' ? (
+                    q.feedback ? (
+                      <p className="text-xs px-2 py-1.5 rounded-lg italic"
+                        style={{ background: 'var(--card)', color: 'var(--text-2)' }}>
+                        {q.feedback}
+                      </p>
+                    ) : (
+                      <p className="text-xs italic" style={{ color: 'var(--text-4)' }}>Dissertativa — sem gabarito automático.</p>
+                    )
+                  ) : (q.itens ?? []).map((item, ai) => {
+                    const isCorrect = q.tipo === 'associativa'
+                      ? item.resposta === 'V'
+                      : item.isCorrect === true;
+                    return (
+                      <div key={ai} className="flex items-start gap-2 text-xs px-2 py-1.5 rounded-lg"
+                        style={{
+                          background: isCorrect ? 'var(--tarefa-dim)' : 'var(--card)',
+                          border:     isCorrect ? '1px solid var(--tarefa-border)' : '1px solid transparent',
+                        }}>
+                        <span className="font-bold shrink-0 w-4" style={{ color: isCorrect ? 'var(--tarefa)' : 'var(--text-3)' }}>
+                          {q.tipo === 'associativa' ? (item.resposta ?? '?') : `${letra(ai)})`}
+                        </span>
+                        <span style={{ color: isCorrect ? 'var(--tarefa)' : 'var(--text-2)' }}>{item.texto}</span>
+                        {isCorrect && q.tipo !== 'associativa' && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="ml-auto shrink-0 mt-0.5">
+                            <path d="M5 12l5 5L19 7" stroke="var(--tarefa)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            )}
+            </div>
           </div>
         );
       })}
@@ -161,16 +179,30 @@ function QuizAccordion({ questoes }: { questoes: Questao[] }) {
 /* ─── Aula Modal ─────────────────────────────────────────────────────────── */
 function AulaModal({ aula, tarefaFiles, onClose }: { aula: Aula; tarefaFiles: File[]; onClose: () => void }) {
   const [viewFile, setViewFile] = useState<File | null>(null);
+  const [visible, setVisible] = useState(false);
   const questoes = aula.quiz?.questoes ?? [];
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: 'rgba(0,0,0,0.70)', backdropFilter: 'blur(3px)' }}
+        style={{
+          background: 'rgba(0,0,0,0.70)', backdropFilter: 'blur(3px)',
+          opacity: visible ? 1 : 0, transition: 'opacity 300ms ease',
+        }}
         onClick={onClose}
       >
         <div className="relative flex flex-col rounded-2xl w-full max-w-2xl max-h-[88vh] overflow-hidden"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+          style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            transform: visible ? 'scale(1) translateY(0)' : 'scale(0.96) translateY(12px)',
+            opacity: visible ? 1 : 0,
+            transition: 'transform 300ms ease, opacity 300ms ease',
+          }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}

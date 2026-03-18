@@ -1,11 +1,9 @@
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
 export async function extractJson(matrizFile: File, quizFiles: File[] = []): Promise<object> {
   const formData = new FormData();
   formData.append('matriz', matrizFile);
   for (const f of quizFiles) formData.append('quizzes', f);
 
-  const res = await fetch(`${API}/preview`, {
+  const res = await fetch(`/api/preview`, {
     method: 'POST',
     body: formData,
   });
@@ -31,6 +29,19 @@ export async function extractJson(matrizFile: File, quizFiles: File[] = []): Pro
   return body.data as object;
 }
 
+export async function extractQuizzes(quizFiles: File[]): Promise<{ questoes: unknown[] }[]> {
+  const formData = new FormData();
+  for (const f of quizFiles) formData.append('quizzes', f);
+
+  const res = await fetch('/api/quizzes', { method: 'POST', body: formData });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error || `Erro ${res.status} ao extrair quizzes`);
+  }
+  const body = await res.json();
+  return body.quizzes || [];
+}
+
 export async function generateMbz(
   matrizJson: string,
   quizFiles: File[],
@@ -47,7 +58,7 @@ export async function generateMbz(
     formData.append('tarefas', file);
   }
 
-  const res = await fetch(`${API}/generate`, {
+  const res = await fetch(`/api/generate`, {
     method: 'POST',
     body: formData,
   });
