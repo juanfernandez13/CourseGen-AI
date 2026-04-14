@@ -24,7 +24,7 @@ function buildSectionXml(id, number, name, summaryXml, sequence, ts, now) {
 function buildModuleXml(id, modname, sectionid, sectionnumber, now, availTs = 0, availEndTs = 0) {
   let avail;
   if (availTs && availEndTs) {
-    avail = `{"op":"&amp;","c":[{"type":"date","d":"&gt;=","t":${availTs}},{"type":"date","d":"&lt;=","t":${availEndTs}}],"showc":[true,true]}`;
+    avail = `{"op":"&amp;","c":[{"type":"date","d":"&gt;=","t":${availTs}},{"type":"date","d":"&lt;","t":${availEndTs}}],"showc":[true,true]}`;
   } else if (availTs) {
     avail = `{"op":"&amp;","c":[{"type":"date","d":"&gt;=","t":${availTs}}],"showc":[true]}`;
   } else {

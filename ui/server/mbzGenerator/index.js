@@ -1,7 +1,7 @@
 'use strict';
 
 const archiver = require('archiver');
-const { v4: uuidv4 } = require('uuid');
+const crypto   = require('crypto');
 const fs   = require('fs');
 const path = require('path');
 const os   = require('os');
@@ -86,7 +86,7 @@ async function generateMBZ(matrizData) {
   const base      = Math.floor(Math.random() * 80000) + 10000;
   const catId     = base + 1;
   const contextId = base + 2;
-  const backupId  = uuidv4().replace(/-/g, '');
+  const backupId  = crypto.randomUUID().replace(/-/g, '');
 
   const disciplina   = matrizData.disciplina   || {};
   const professor    = matrizData.professor    || {};
@@ -497,6 +497,7 @@ ${actSettings}
   for (const [i, aula] of aulas.entries()) {
     const ids    = aulaIds[i];
     const secNum = i + 1;
+    const tsAula = dateToTs(aula.data_inicio);
 
     // Fórum (EaD category)
     if (aula.forum) {
@@ -505,7 +506,7 @@ ${actSettings}
       const tsEnd    = dateToTs(aula.forum.data_fim    || aula.data_fim, true, '23:55:00');
       write(`${forumDir}/forum.xml`, buildForumDiscussionXml(ids.forumId, ids.forumCtx, aula, now));
       writeActivityStubs(forumDir, ids.forumId, 'forum', ids.sectionId, secNum, tsStart,
-        buildActivityGradesXml(ids.forumId, eadCatId, aula.forum.titulo || `Fórum ${i + 1}`, 'forum', i * 3 + 10, now),
+        buildActivityGradesXml(ids.forumId, eadCatId, aula.forum.titulo || `Fórum ${i + 1}`, 'forum', i * 3 + 10, now, 1),
         tsEnd);
       write(`${forumDir}/grading.xml`, buildGradingXml(ids.forumId + 70000, 'forum'));
     }
@@ -514,7 +515,7 @@ ${actSettings}
     if (aula.quiz) {
       const quizDir = `activities/quiz_${ids.quizId}`;
       write(`${quizDir}/quiz.xml`, buildQuizXml(ids.quizId, ids.quizCtx, aula, now));
-      writeActivityStubs(quizDir, ids.quizId, 'quiz', ids.sectionId, secNum, 0,
+      writeActivityStubs(quizDir, ids.quizId, 'quiz', ids.sectionId, secNum, tsAula,
         buildActivityGradesXml(ids.quizId, eadCatId, aula.quiz?.titulo || `Questionário ${i + 1}`, 'quiz', i * 3 + 11, now));
       if (aula.quiz.questoes?.length) {
         const gradeItemId = ids.quizId + 90000;

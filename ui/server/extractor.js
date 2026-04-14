@@ -31,13 +31,13 @@ Siga EXATAMENTE este schema:
     {
       "numero": 1,
       "titulo": "Título completo da aula (ex: Aula 1 – Elementos fundamentais da Geometria)",
-      "descricao": "Texto de apresentação da aula para o aluno (2-5 frases). Se não houver, crie a partir dos conteúdos.",
+      "descricao": "Transcreva INTEGRALMENTE o texto de apresentação da aula como está no documento. Preserve todos os parágrafos separando-os com \\n\\n. Não resuma, não parafraseie, não crie texto novo.",
       "data_inicio": "DD/MM/YYYY ou null",
       "data_fim": "DD/MM/YYYY ou null",
       "forum": {
         "titulo": "[Aula N] [Fórum N] Título do tema [nota]",
         "nota": 5,
-        "descricao": "Proposta/enunciado do fórum para o aluno.",
+        "descricao": "Transcreva INTEGRALMENTE a proposta/enunciado do fórum como está no documento. Inclua todas as orientações. Não resuma.",
         "data_inicio": "DD/MM/YYYY ou null",
         "data_fim": "DD/MM/YYYY ou null"
       },
@@ -50,18 +50,18 @@ Siga EXATAMENTE este schema:
       "tarefa": {
         "titulo": "[Aula N] [Tarefa N] Título [nota]",
         "nota": 10,
-        "descricao": "Enunciado da tarefa.",
+        "descricao": "Transcreva INTEGRALMENTE o enunciado da tarefa como está no documento. Não resuma.",
         "data_inicio": "DD/MM/YYYY ou null",
         "data_fim": "DD/MM/YYYY ou null"
       }
     }
   ],
-  "apresentacao": "Texto completo de apresentação/boas-vindas da disciplina escrito pelo professor (geralmente no início do documento, antes das aulas). Preserve parágrafos separando-os com \\n\\n.",
+  "apresentacao": "Transcreva INTEGRALMENTE o texto de apresentação/boas-vindas da disciplina escrito pelo professor (geralmente no início do documento, antes das aulas). Preserve parágrafos separando-os com \\n\\n. Não resuma nem omita partes.",
   "encontros": [
     {
       "numero": 1,
       "titulo": "1º Encontro VIRTUAL (NOITE 19h às 21h - quarta-feira) - 18/03/2026",
-      "descricao": "Descrição completa das atividades do encontro.",
+      "descricao": "Transcreva INTEGRALMENTE a descrição das atividades do encontro como está no documento. Não resuma.",
       "data": "DD/MM/YYYY ou null",
       "turnos": 1,
       "avaliacao": "sem_nota",
@@ -91,12 +91,24 @@ Siga EXATAMENTE este schema:
   }
 }
 
+⚠️⚠️⚠️ REGRA FUNDAMENTAL — TRANSCRIÇÃO LITERAL ⚠️⚠️⚠️
+TODOS os campos de texto (descricao, apresentacao, ementa, enunciado, etc.) devem ser TRANSCRITOS LITERALMENTE do documento original.
+NUNCA resuma, parafraseie, encurte, reescreva ou omita partes do texto.
+Copie EXATAMENTE como está escrito na matriz, palavra por palavra, preservando todos os parágrafos (separe com \n\n).
+Se o texto original tem 10 parágrafos, o JSON deve ter os mesmos 10 parágrafos completos.
+Esta regra se aplica a: aulas[].descricao, forum.descricao, tarefa.descricao, encontros[].descricao, apresentacao, mural.descricao, ementa, e qualquer outro campo de texto.
+
 Regras:
 - "aulas": extraia CADA aula/semana/tópico do cronograma como um item separado.
 - "mural.descricao": transcreva INTEGRALMENTE o conteúdo da seção '6. DESCRIÇÃO DO MURAL' (ou seção numerada equivalente). Separe parágrafos com \n\n. Nunca resuma.
 - "forum": inclua SOMENTE se existir explicitamente na matriz um fórum de discussão para aquela aula (campo de atividade EaD específico). Se não existir, use null. Extraia as datas de início e fim do período de participação.
+- "forum.descricao": transcreva INTEGRALMENTE o enunciado/proposta do fórum como está na matriz. Inclua todas as orientações de participação. Nunca resuma.
 - "quiz": inclua quando houver questionário/avaliação online com prazo definido. Senão, use null.
 - "tarefa": inclua quando houver tarefa/trabalho com entrega (envio de arquivo). Senão, use null.
+- "tarefa.descricao": transcreva INTEGRALMENTE o enunciado da tarefa como está na matriz. Nunca resuma.
+- "aulas[].descricao": transcreva INTEGRALMENTE o texto de apresentação da aula como está na matriz. Nunca resuma nem crie texto que não existe no documento.
+- "apresentacao": transcreva INTEGRALMENTE o texto de apresentação/boas-vindas da disciplina. Nunca resuma.
+- "encontros[].descricao": transcreva INTEGRALMENTE a descrição das atividades do encontro. Nunca resuma.
 - "disciplina.polo": extraia o polo ou local de oferta da disciplina (ex: "Polo Fortaleza"). Use null se não encontrar.
 - "professor.tutor": extraia o nome do(a) tutor(a) se estiver no documento. Use null se não encontrar.
 - "encontros": extraia a seção "DESCRIÇÃO DO(S) ENCONTRO(S) PRESENCIAL(IS) OU VIRTUAL(IS)" (geralmente seção 9). Cada encontro vira um item com: numero, titulo (completo com data), descricao (atividades), data (DD/MM/YYYY do encontro), turnos (1 ou 2, quantidade de turnos), avaliacao ("sem_nota" ou "nota_media"), peso (0 a 100, percentual), nota_titulo (campo "Nota -" da configuração), falta_titulo (campo "Falta -" da configuração). Use [] se não houver seção de encontros.
@@ -144,7 +156,7 @@ async function geminiGenerate(ai, prompt, maxRetries = 5) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
       });
       return response;
