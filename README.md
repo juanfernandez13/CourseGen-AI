@@ -121,9 +121,3 @@ Acesse em [http://localhost:3000](http://localhost:3000).
 | Variável | Descrição |
 |---|---|
 | `GEMINI_KEY` | Chave de API do Google Gemini (obrigatória) |
-
----
-
-## Licença
-
-MIT © IFCE
