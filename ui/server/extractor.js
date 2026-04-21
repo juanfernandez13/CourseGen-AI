@@ -47,6 +47,29 @@ Siga EXATAMENTE este schema:
         "data_inicio": "DD/MM/YYYY ou null",
         "data_fim": "DD/MM/YYYY ou null"
       },
+      "chat": {
+        "titulo": "Título do tema do chat",
+        "nota": 6.5,
+        "descricao": "Transcreva INTEGRALMENTE o enunciado/proposta do chat como está no documento. Não resuma.",
+        "nota_titulo": "[Aula N] [Chat N] Título [nota]",
+        "data_inicio": "DD/MM/YYYY ou null",
+        "data_fim": "DD/MM/YYYY ou null"
+      },
+      "wiki": {
+        "titulo": "Título do tema da wiki",
+        "nota": 10,
+        "descricao": "Transcreva INTEGRALMENTE o enunciado/proposta da wiki como está no documento. Não resuma.",
+        "nota_titulo": "[Aula N] [Wiki N] Título [nota]",
+        "data_inicio": "DD/MM/YYYY ou null",
+        "data_fim": "DD/MM/YYYY ou null"
+      },
+      "glossario": {
+        "titulo": "[Aula N] [Glossário N] Título [nota]",
+        "nota": 5,
+        "descricao": "Transcreva INTEGRALMENTE o enunciado/proposta do glossário como está no documento. Não resuma.",
+        "data_inicio": "DD/MM/YYYY ou null",
+        "data_fim": "DD/MM/YYYY ou null"
+      },
       "tarefa": {
         "titulo": "[Aula N] [Tarefa N] Título [nota]",
         "nota": 10,
@@ -104,6 +127,9 @@ Regras:
 - "forum": inclua SOMENTE se existir explicitamente na matriz um fórum de discussão para aquela aula (campo de atividade EaD específico). Se não existir, use null. Extraia as datas de início e fim do período de participação.
 - "forum.descricao": transcreva INTEGRALMENTE o enunciado/proposta do fórum como está na matriz. Inclua todas as orientações de participação. Nunca resuma.
 - "quiz": inclua quando houver questionário/avaliação online com prazo definido. Senão, use null.
+- "chat": inclua quando houver atividade de chat/sala de bate-papo para aquela aula. O campo "nota_titulo" segue o padrão "[Aula N] [Chat N] Título [nota]". O campo "descricao" deve conter o enunciado/proposta do chat transcrito integralmente. Extraia as datas de início e fim do período. Use null se não houver chat.
+- "wiki": inclua quando houver atividade wiki (texto colaborativo) para aquela aula. O campo "nota_titulo" segue o padrão "[Aula N] [Wiki N] Título [nota]". Transcreva integralmente a proposta da wiki. Use null se não houver wiki.
+- "glossario": inclua quando houver atividade de glossário para aquela aula. O título segue o padrão "[Aula N] [Glossário N] Título [nota]". Transcreva integralmente a proposta do glossário. Use null se não houver glossário.
 - "tarefa": inclua quando houver tarefa/trabalho com entrega (envio de arquivo). Senão, use null.
 - "tarefa.descricao": transcreva INTEGRALMENTE o enunciado da tarefa como está na matriz. Nunca resuma.
 - "aulas[].descricao": transcreva INTEGRALMENTE o texto de apresentação da aula como está na matriz. Nunca resuma nem crie texto que não existe no documento.

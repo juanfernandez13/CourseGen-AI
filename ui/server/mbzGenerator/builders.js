@@ -21,7 +21,9 @@ function buildSectionXml(id, number, name, summaryXml, sequence, ts, now) {
 </section>`;
 }
 
-function buildModuleXml(id, modname, sectionid, sectionnumber, now, availTs = 0, availEndTs = 0) {
+function buildModuleXml(id, modname, sectionid, sectionnumber, now, availTs = 0, availEndTs = 0, opts = {}) {
+  const visible         = opts.visible !== undefined ? opts.visible : 1;
+  const showdescription = opts.showdescription !== undefined ? opts.showdescription : 0;
   let avail;
   if (availTs && availEndTs) {
     avail = `{"op":"&amp;","c":[{"type":"date","d":"&gt;=","t":${availTs}},{"type":"date","d":"&lt;","t":${availEndTs}}],"showc":[true,true]}`;
@@ -39,9 +41,9 @@ function buildModuleXml(id, modname, sectionid, sectionnumber, now, availTs = 0,
   <added>${now}</added>
   <score>0</score>
   <indent>0</indent>
-  <visible>1</visible>
+  <visible>${visible}</visible>
   <visibleoncoursepage>1</visibleoncoursepage>
-  <visibleold>1</visibleold>
+  <visibleold>${visible}</visibleold>
   <groupmode>0</groupmode>
   <groupingid>0</groupingid>
   <completion>1</completion>
@@ -50,7 +52,7 @@ function buildModuleXml(id, modname, sectionid, sectionnumber, now, availTs = 0,
   <completionview>0</completionview>
   <completionexpected>0</completionexpected>
   <availability>${avail}</availability>
-  <showdescription>0</showdescription>
+  <showdescription>${showdescription}</showdescription>
   <downloadcontent>1</downloadcontent>
   <lang></lang>
   <tags>
@@ -424,6 +426,103 @@ function buildQuestionsXml(aulas, aulaIds, now) {
 </question_categories>`;
 }
 
+// ── Chat ─────────────────────────────────────────────────────────────────────
+
+function buildChatXml(id, ctx, aula, now) {
+  const chat      = aula.chat || {};
+  const titulo    = sanitize(normalizeTitleBrackets(chat.titulo || aula.titulo || `Chat ${aula.numero || id}`));
+  const descricao = sanitize(chat.descricao || aula.descricao || '');
+  const chattime  = dateToTs(chat.data_inicio || aula.data_inicio) || 0;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<activity id="${id}" moduleid="${id}" modulename="chat" contextid="${ctx}">
+  <chat id="${id}">
+    <name>${titulo}</name>
+    <intro>&lt;p dir="ltr"&gt;${descricao}&lt;/p&gt;</intro>
+    <introformat>1</introformat>
+    <keepdays>0</keepdays>
+    <studentlogs>0</studentlogs>
+    <chattime>${chattime}</chattime>
+    <schedule>0</schedule>
+    <timemodified>${now}</timemodified>
+    <messages>
+    </messages>
+  </chat>
+</activity>`;
+}
+
+// ── Wiki ─────────────────────────────────────────────────────────────────────
+
+function buildWikiXml(id, ctx, aula, now) {
+  const wiki      = aula.wiki || {};
+  const titulo    = sanitize(normalizeTitleBrackets(wiki.titulo || aula.titulo || `Wiki ${aula.numero || id}`));
+  const descricao = sanitize(wiki.descricao || aula.descricao || '');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<activity id="${id}" moduleid="${id}" modulename="wiki" contextid="${ctx}">
+  <wiki id="${id}">
+    <name>${titulo}</name>
+    <intro>&lt;p dir="ltr" style="text-align: left;"&gt;${descricao}&lt;/p&gt;</intro>
+    <introformat>1</introformat>
+    <timecreated>0</timecreated>
+    <timemodified>${now}</timemodified>
+    <firstpagetitle>1</firstpagetitle>
+    <wikimode>collaborative</wikimode>
+    <defaultformat>html</defaultformat>
+    <forceformat>0</forceformat>
+    <editbegin>0</editbegin>
+    <editend>0</editend>
+    <subwikis>
+    </subwikis>
+  </wiki>
+</activity>`;
+}
+
+// ── Glossary ─────────────────────────────────────────────────────────────────
+
+function buildGlossaryXml(id, ctx, aula, now) {
+  const glossary  = aula.glossario || {};
+  const titulo    = sanitize(normalizeTitleBrackets(glossary.titulo || aula.titulo || `Glossário ${aula.numero || id}`));
+  const descricao = sanitize(glossary.descricao || aula.descricao || '');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<activity id="${id}" moduleid="${id}" modulename="glossary" contextid="${ctx}">
+  <glossary id="${id}">
+    <name>${titulo}</name>
+    <intro>&lt;p dir="ltr"&gt;${descricao}&lt;/p&gt;</intro>
+    <introformat>1</introformat>
+    <allowduplicatedentries>0</allowduplicatedentries>
+    <displayformat>fullwithauthor</displayformat>
+    <mainglossary>0</mainglossary>
+    <showspecial>1</showspecial>
+    <showalphabet>1</showalphabet>
+    <showall>1</showall>
+    <allowcomments>1</allowcomments>
+    <allowprintview>1</allowprintview>
+    <usedynalink>0</usedynalink>
+    <defaultapproval>1</defaultapproval>
+    <globalglossary>0</globalglossary>
+    <entbypage>10</entbypage>
+    <editalways>0</editalways>
+    <rsstype>0</rsstype>
+    <rssarticles>0</rssarticles>
+    <assessed>1</assessed>
+    <assesstimestart>0</assesstimestart>
+    <assesstimefinish>0</assesstimefinish>
+    <scale>10</scale>
+    <timecreated>${now}</timecreated>
+    <timemodified>${now}</timemodified>
+    <completionentries>0</completionentries>
+    <entries>
+    </entries>
+    <entriestags>
+    </entriestags>
+    <categories>
+    </categories>
+  </glossary>
+</activity>`;
+}
+
 // ── Assign (tarefa / nota / falta) ────────────────────────────────────────────
 
 function buildAssignXml(id, ctx, aula, now, arquivos = [], gradeOnly = false) {
@@ -788,6 +887,9 @@ module.exports = {
   buildSectionXml,
   buildModuleXml,
   buildForumDiscussionXml,
+  buildChatXml,
+  buildWikiXml,
+  buildGlossaryXml,
   buildQuizXml,
   buildQuestionsXml,
   buildAssignXml,

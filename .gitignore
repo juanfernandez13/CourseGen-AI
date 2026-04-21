@@ -2,7 +2,6 @@
 /quizzes
 /tarefas
 /uploads
-*.mbz
 *.doc
 *.docx
 *.pdf

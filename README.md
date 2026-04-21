@@ -1,107 +1,129 @@
-# Matriz DE → Moodle (.mbz)
-**CREAD IFCE** — Converte automaticamente a Matriz DE (.docx) em arquivo `.mbz` importável no Moodle.
+<p align="center">
+  <img src="https://img.shields.io/badge/CourseGen-AI-6366f1?style=for-the-badge&logo=sparkles&logoColor=white" alt="CourseGen AI" />
+  <img src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js" />
+  <img src="https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white" />
+  <img src="https://img.shields.io/badge/Moodle-MBZ-f98012?style=for-the-badge&logo=moodle&logoColor=white" />
+</p>
+
+<h1 align="center">CourseGen AI</h1>
+
+<p align="center">
+  Transforme documentos de planejamento de disciplinas em pacotes Moodle prontos para importar — com inteligência artificial.
+</p>
 
 ---
 
-## Como funciona
+## O que é
+
+**CourseGen AI** é uma aplicação web que converte automaticamente a **Matriz DE** (documento de planejamento de disciplinas do IFCE, em `.docx`) em arquivos de backup Moodle (`.mbz`), prontos para importação na plataforma.
+
+Todo o processo de leitura, interpretação e estruturação do conteúdo é feito pelo modelo **Google Gemini 2.5 Flash**, eliminando horas de trabalho manual de cadastro no Moodle.
+
+---
+
+## Funcionalidades
+
+- **Extração inteligente** — lê a Matriz DE e identifica automaticamente nome, código, ementa, objetivos, cronograma, atividades e avaliações
+- **Suporte a quizzes** — importa arquivos de questões (`.docx`) e os associa às atividades corretas
+- **Suporte a tarefas** — anexa arquivos de tarefas às atividades de entrega
+- **Editor de revisão** — visualize e edite o JSON extraído antes de gerar o pacote
+- **Builder manual** — crie a estrutura da disciplina do zero, sem precisar de documentos
+- **Geração completa de MBZ** — gera o XML compatível com o formato Moodle 2.x com seções, fóruns, quizzes, tarefas, wikis, glossários, chats e encontros
+- **Tema claro/escuro** — interface responsiva com suporte a modo escuro nativo
+
+---
+
+## Fluxo de uso
 
 ```
-Matriz DE (.docx)
-       ↓
-  mammoth → texto bruto
-       ↓
-  parser → divide em 4 chunks por seção
-       ↓
-  Gemini 1.5 Flash → JSON por chunk (cabeçalho, ementa, cronograma, avaliações)
-       ↓
-  mbzGenerator → estrutura XML do Moodle compactada em .zip
-       ↓
-  arquivo .mbz para importar no Moodle
+1. Upload          →   2. Revisão         →   3. Download
+────────────────       ─────────────────       ────────────────
+Suba a Matriz DE       Revise e edite o        Baixe o .mbz e
++ quizzes + tarefas    JSON extraído pela IA   importe no Moodle
 ```
 
-### Por que chunks?
-A Matriz DE é grande demais para um único request ao Gemini.
-O sistema divide em 4 partes menores, cada uma processada separadamente,
-eliminando o problema de requests gigantes que falham.
+---
+
+## Tecnologias
+
+| Camada | Tecnologia |
+|---|---|
+| Frontend | Next.js 16, React 19, TypeScript |
+| Estilização | Tailwind CSS v4 |
+| IA | Google Gemini 2.5 Flash (`@google/genai`) |
+| Leitura de DOCX | mammoth.js |
+| Geração de MBZ | archiver.js + XML programático |
+| Utilitários | uuid, jsonrepair, pdfjs-dist |
 
 ---
 
 ## Instalação
 
+### Pré-requisitos
+
+- Node.js 18+
+- Yarn
+- Chave de API do [Google AI Studio](https://aistudio.google.com/app/apikey)
+
+### Passos
+
 ```bash
-# 1. Clone ou copie o projeto
-cd matriz-moodle
+# Clone o repositório
+git clone https://github.com/seu-usuario/coursegen-ai.git
+cd coursegen-ai/ui
 
-# 2. Instale as dependências
-npm install
+# Instale as dependências
+yarn install
 
-# 3. Rode o servidor
-npm start
-# ou em modo dev (com auto-reload):
-npm run dev
+# Configure as variáveis de ambiente
+echo "GEMINI_KEY=sua_chave_aqui" > .env.local
+
+# Inicie o servidor de desenvolvimento
+yarn dev
 ```
 
-Acesse: **http://localhost:3000**
-
----
-
-## Uso
-
-1. Cole sua **chave da API Gemini** (obtenha em [aistudio.google.com](https://aistudio.google.com/app/apikey))
-2. Faça **upload da Matriz DE** em `.docx`
-3. Clique em **Pré-visualizar** para conferir os dados extraídos
-4. Clique em **Gerar .mbz** para baixar o arquivo
-5. No Moodle: **Administração do curso → Restaurar → Enviar arquivo .mbz**
-
----
-
-## O que é gerado no .mbz
-
-| Elemento Moodle | Origem na Matriz DE |
-|---|---|
-| Nome e código do curso | Cabeçalho da matriz |
-| Descrição do curso | Ementa + dados do professor + bibliografia |
-| Tópicos/seções | Uma seção por unidade de conteúdo |
-| Fórum de avisos | Criado automaticamente (obrigatório) |
-| Tarefas de entrega | Uma por avaliação listada |
-| Eventos de calendário | Datas do cronograma de aulas |
-| Livro de notas | Itens de nota por avaliação |
+Acesse em [http://localhost:3000](http://localhost:3000).
 
 ---
 
 ## Estrutura do projeto
 
 ```
-matriz-moodle/
-├── src/
-│   ├── server.js        # Express + endpoints /convert e /preview
-│   ├── parser.js        # Lê .docx e divide em seções (chunks)
-│   └── mbzGenerator.js  # Gera o .mbz com XML válido do Moodle
-├── public/
-│   └── index.html       # Interface web
-├── uploads/             # Pasta temporária (auto-criada)
+.
+├── ui/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── preview/       # Extração da Matriz via Gemini
+│   │   │   ├── quizzes/       # Extração de questões via Gemini
+│   │   │   └── generate/      # Geração do arquivo .mbz
+│   │   ├── components/
+│   │   │   ├── UploadStep     # Passo 1 — upload de arquivos
+│   │   │   ├── ReviewStep     # Passo 2 — revisão do JSON
+│   │   │   ├── BuilderStep    # Modo manual de criação
+│   │   │   └── DoneStep       # Passo 3 — confirmação de download
+│   │   └── lib/
+│   │       ├── api.ts         # Funções de fetch para as rotas
+│   │       └── useJsonHistory # Histórico local de extrações
+│   └── server/
+│       ├── extractor.js       # Lógica de chamada ao Gemini
+│       ├── parser.js          # Leitura de DOCX com mammoth
+│       └── mbzGenerator/
+│           ├── index.js       # Orquestração do pipeline MBZ
+│           ├── builders.js    # Construtores de XML Moodle
+│           └── utils.js       # Helpers de XML, SHA1 e datas
 └── package.json
 ```
 
 ---
 
-## Dependências
+## Variáveis de ambiente
 
-| Pacote | Uso |
+| Variável | Descrição |
 |---|---|
-| `express` | Servidor HTTP |
-| `multer` | Upload de arquivos |
-| `mammoth` | Leitura de .docx |
-| `@google/generative-ai` | API Gemini |
-| `archiver` | Compactação em .zip/.mbz |
-| `uuid` | IDs únicos para o backup |
+| `GEMINI_KEY` | Chave de API do Google Gemini (obrigatória) |
 
 ---
 
-## Próximos passos sugeridos
+## Licença
 
-- [ ] Suporte a Google Docs (via Google Drive API) sem precisar baixar o .docx
-- [ ] Integração com Google Calendar para puxar as datas do cronograma automaticamente  
-- [ ] Importação direta via API do Moodle (sem precisar baixar o .mbz manualmente)
-- [ ] Histórico de conversões com visualização do JSON extraído
-- [ ] Salvar a chave Gemini em variável de ambiente (.env)
+MIT © IFCE

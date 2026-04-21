@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     if (quizTmpPaths.length > 0) {
       try {
-        const allQuizzes = await extractAllQuizzes(quizTmpPaths, apiKey);
+        const allQuizzes = await extractAllQuizzes(quizTmpPaths, apiKey!);
         let quizIdx = 0;
         const aulas = (matrizData.aulas as Array<Record<string, unknown>>) || [];
         for (const aula of aulas) {

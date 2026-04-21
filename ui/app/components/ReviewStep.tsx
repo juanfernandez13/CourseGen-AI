@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import FileViewer from './FileViewer';
+import type { useJsonHistory } from '../lib/useJsonHistory';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 type QuestaoItem = { texto: string; isCorrect?: boolean; resposta?: string };
@@ -568,13 +569,17 @@ type Props = {
   loading: boolean;
   error: string | null;
   tarefaFiles: File[];
+  history?: ReturnType<typeof useJsonHistory>;
+  onRestore?: (json: string) => void;
 };
 
-export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loading, error, tarefaFiles }: Props) {
+export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loading, error, tarefaFiles, history, onRestore }: Props) {
   const [view, setView] = useState<'visual' | 'json'>('visual');
+  const [showHistory, setShowHistory] = useState(false);
   const { data, error: parseError } = parseJsonSafe(json);
   const canGenerate = !parseError && !loading;
   const tarefaMap = buildTarefaMap(tarefaFiles);
+  const hasHistory = history && history.versions.length > 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -585,27 +590,91 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
           <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>Clique em uma aula para ver detalhes e arquivos.</p>
         </div>
 
-        <div className="flex rounded-lg overflow-hidden shrink-0"
-          style={{ border: '1px solid var(--border)', background: 'var(--card)' }}>
-          {(['visual', 'json'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-all"
-              style={{ background: view === v ? 'var(--primary)' : 'transparent', color: view === v ? 'var(--primary-text)' : 'var(--text-3)' }}>
-              {v === 'visual' ? (
-                <><svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="3"   width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
-                  <rect x="14" y="3"  width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
-                  <rect x="3" y="14"  width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
-                  <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
-                </svg>Visual</>
-              ) : (
-                <><svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M12 8v8M9 11l3-3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>JSON</>
-              )}
+        <div className="flex gap-2 shrink-0">
+          {hasHistory && (
+            <button
+              onClick={() => setShowHistory(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all"
+              style={{
+                background: showHistory ? 'var(--primary-dim)' : 'var(--card)',
+                color: showHistory ? 'var(--primary)' : 'var(--text-3)',
+                border: showHistory ? '1px solid var(--primary-ring)' : '1px solid var(--border)',
+              }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points="3,4 3,8 7,8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 7v5l4 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Versões ({history!.versions.length})
             </button>
-          ))}
+          )}
+          <div className="flex rounded-lg overflow-hidden"
+            style={{ border: '1px solid var(--border)', background: 'var(--card)' }}>
+            {(['visual', 'json'] as const).map(v => (
+              <button key={v} onClick={() => setView(v)}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-all"
+                style={{ background: view === v ? 'var(--primary)' : 'transparent', color: view === v ? 'var(--primary-text)' : 'var(--text-3)' }}>
+                {v === 'visual' ? (
+                  <><svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="3"   width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
+                    <rect x="14" y="3"  width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
+                    <rect x="3" y="14"  width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
+                  </svg>Visual</>
+                ) : (
+                  <><svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M12 8v8M9 11l3-3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>JSON</>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Version history panel */}
+      <div style={{ display: 'grid', gridTemplateRows: showHistory ? '1fr' : '0fr', transition: 'grid-template-rows 300ms ease' }}>
+        <div style={{ overflow: 'hidden' }}>
+          {hasHistory && (
+            <div className="flex flex-col gap-2 rounded-xl p-4 mb-2"
+              style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-1)' }}>Restaurar versão anterior</span>
+                <button onClick={history!.clear}
+                  className="text-xs px-2 py-1 rounded-md"
+                  style={{ color: 'var(--error)', background: 'var(--error-dim)', border: '1px solid var(--error-border)' }}>
+                  Limpar
+                </button>
+              </div>
+              <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
+                {history!.versions.map(v => (
+                  <div key={v.id} className="flex items-center gap-3 rounded-lg px-3 py-2"
+                    style={{ background: 'var(--surface)', border: '1px solid var(--border-subtle)' }}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate" style={{ color: 'var(--text-1)' }}>{v.label}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-4)' }}>
+                        {new Date(v.timestamp).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => { if (onRestore) { history!.save(json, 'Backup antes de restaurar'); onRestore(v.json); } setShowHistory(false); }}
+                      className="text-xs px-2.5 py-1 rounded-md font-medium shrink-0"
+                      style={{ background: 'var(--primary-dim)', color: 'var(--primary)', border: '1px solid var(--primary-ring)' }}>
+                      Restaurar
+                    </button>
+                    <button onClick={() => history!.remove(v.id)}
+                      className="flex items-center justify-center w-6 h-6 rounded-md shrink-0"
+                      style={{ color: 'var(--text-4)' }} title="Remover">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

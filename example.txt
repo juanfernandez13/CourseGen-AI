@@ -1,0 +1,442 @@
+{
+  "disciplina": {
+    "nome": "Laboratório de Ensino de Matemática",
+    "codigo": null,
+    "carga_horaria": "80 h",
+    "curso": "Licenciatura em Matemática",
+    "semestre": "2º",
+    "turma": null,
+    "polo": null
+  },
+  "professor": {
+    "nome": "Wellington Lucio Bezerra",
+    "email": "wellingtonlucio@ifce.edu.br",
+    "titulacao": null,
+    "tutor": null
+  },
+  "ementa": "As potencialidades didático-pedagógicas do Laboratório de Ensino de Matemática (LEM); Laboratório de ensino de matemática e materiais didáticos manipuláveis; Materiais manipuláveis como recursos didáticos na formação de professores de matemática; O LEM e a mediação das novas tecnologias; As atividades de pesquisa em educação matemática como apoio à formação docente",
+  "mural": {
+    "descricao": "Caro(a) aluno(a),\n\nSeja bem-vindo à disciplina de Laboratório de Ensino de Matemática.\nNesta disciplina, exploraremos o Laboratório de Ensino de Matemática (LEM), analisando o que esse espaço representa para o ensino de Matemática e como o professor pode estruturá-lo na escola, transformando-o em um ambiente de grande potencial para a aprendizagem.\n\nLivro da disciplina\n\nPUD da disciplina\n\nBiblioteca\n\nPROFESSORES(AS)\n\nNOME \nTUTOR(A) A DISTÂNCIA\n\nNOME \nPROF. FORMADOR(A)\n\nAGENDA\n\nNAVEGAÇÃO\n\nADMINISTRAÇÃO"
+  },
+  "aulas": [
+    {
+      "numero": 1,
+      "titulo": "O laboratório de ensino de matemática e suas potencialidades didático-pedagógicas",
+      "descricao": "Olá, aluno(a)!\n\nNesta aula, exploraremos o Laboratório de Ensino de Matemática (LEM) e como as diferentes concepções sobre o LEM podem influenciar o professor na escolha e na execução de atividades voltadas ao ensino e à aprendizagem da Matemática. Para complementar esse estudo, compreenderemos por que o público-alvo do LEM deve ser um fator determinante tanto para sua estruturação física quanto para a escolha de seus elementos concretos — materiais e instrumentos de aprendizagem.",
+      "data_inicio": "10/04/2026",
+      "data_fim": "19/04/2026",
+      "forum": {
+        "titulo": "[Aula 1] [Fórum 1] O LEM e suas potencialidades didático-pedagógicas [5]",
+        "nota": 5,
+        "descricao": "Na Aula 1, exploramos as concepções do LEM e suas potencialidades, bem como sua dimensão estrutural. É importante destacar que as concepções que o professor de Matemática e a escola possuem sobre o LEM influenciam diretamente a forma como ele será implantado e utilizado como espaço de aprendizagem dessa disciplina.\n\nComo parte da atividade, comente cada concepção apresentada, incluindo exemplos práticos de posicionamento docente relacionados a essas concepções.\n\nOrientações para o fórum:\nParticipe pelo menos duas vezes.\nPrimeira participação: responda aos questionamentos propostos no enunciado da atividade.\nSegunda participação: complemente, pergunte ou contra-argumente com base na participação de seus colegas e/ou professor(a).",
+        "data_inicio": "10/04/2026",
+        "data_fim": "19/04/2026"
+      },
+      "quiz": {
+        "titulo": "[Aula 1] [Questionário 1] Concepções do LEM [10]",
+        "nota": 10,
+        "data_inicio": "10/04/2026",
+        "data_fim": "19/04/2026",
+        "questoes": [
+          {
+            "numero": 1,
+            "tipo": "multipla_escolha",
+            "enunciado": "Qual das alternativas a seguir melhor descreve o conceito de Laboratório de Ensino de Matemática (LEM)?",
+            "pontuacao": 2.5,
+            "itens": [
+              { "texto": "Um espaço exclusivo para aplicação de provas de Matemática.", "isCorrect": false },
+              { "texto": "Um ambiente que potencializa o ensino e a aprendizagem da Matemática por meio de materiais concretos e atividades práticas.", "isCorrect": true },
+              { "texto": "Uma sala de informática destinada apenas ao uso de softwares educacionais.", "isCorrect": false },
+              { "texto": "Um depósito de materiais didáticos sem função pedagógica definida.", "isCorrect": false }
+            ]
+          },
+          {
+            "numero": 2,
+            "tipo": "multipla_escolha",
+            "enunciado": "Segundo Lorenzato, qual é o principal objetivo do LEM?",
+            "pontuacao": 2.5,
+            "itens": [
+              { "texto": "Substituir completamente as aulas expositivas tradicionais.", "isCorrect": false },
+              { "texto": "Armazenar livros e cadernos dos alunos.", "isCorrect": false },
+              { "texto": "Proporcionar um ambiente que favoreça a construção do conhecimento matemático de forma ativa.", "isCorrect": true },
+              { "texto": "Servir apenas como espaço de recreação para os alunos.", "isCorrect": false }
+            ]
+          },
+          {
+            "numero": 3,
+            "tipo": "associativa",
+            "enunciado": "Associe cada concepção do LEM à sua descrição correspondente:",
+            "pontuacao": 2.5,
+            "itens": [
+              { "texto": "LEM como depósito", "resposta": "Espaço para guardar materiais sem uso pedagógico planejado" },
+              { "texto": "LEM como sala de aula alternativa", "resposta": "Ambiente para aulas diferenciadas com recursos manipuláveis" },
+              { "texto": "LEM como laboratório de experimentação", "resposta": "Espaço para investigação e construção do conhecimento matemático" }
+            ]
+          },
+          {
+            "numero": 4,
+            "tipo": "dissertativa",
+            "enunciado": "Explique, com suas palavras, como a concepção que o professor possui sobre o LEM influencia a forma como ele utiliza esse espaço em suas práticas pedagógicas.",
+            "pontuacao": 2.5,
+            "feedback": "Considere as diferentes concepções apresentadas por Lorenzato e exemplifique."
+          }
+        ]
+      },
+      "wiki": null,
+      "glossario": null,
+      "chat": null,
+      "tarefa": {
+        "titulo": "[Aula 1] [Tarefa 1] Concepções elencadas por Lorenzato [10]",
+        "nota": 10,
+        "descricao": "Clique no link Aula 1 – Tarefa 1, faça o download do arquivo. Responda às questões propostas e depois deposite sua atividade neste espaço.",
+        "data_inicio": "10/04/2026",
+        "data_fim": "19/04/2026",
+        "arquivos": [
+          {
+            "filename": "tarefa_1.docx",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_1.docx"
+          },
+          {
+            "filename": "tarefa_1.pdf",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_1.pdf"
+          }
+        ]
+      }
+    },
+    {
+      "numero": 2,
+      "titulo": "Materiais didáticos manipuláveis e suas potencialidades para o ensino-aprendizagem da matemática no LEM",
+      "descricao": "Prezado(a) cursista,\n\nNa aula 2, vamos compreender a importância do LEM no espaço escolar, vamos estudar as características que um Laboratório de Ensino de Matemática deve apresentar, considerando as necessidades e particularidades do público a quem ele servirá como instrumento de aprendizagem.",
+      "data_inicio": "19/04/2026",
+      "data_fim": "26/04/2026",
+      "forum": {
+        "titulo": "[Aula 2] [Fórum 2] Materiais didáticos manipuláveis e suas potencialidades para o ensino-aprendizagem da matemática no LEM [5]",
+        "nota": 5,
+        "descricao": "Nesta aula, discutimos a importância dos materiais didáticos manipuláveis (MDs) e suas potencialidades no processo de ensino-aprendizagem da Matemática no LEM.\n\nComo atividade, realize uma pesquisa sobre materiais didáticos manipuláveis e cite um exemplo que corrobora com a afirmativa de Lorenzato (2006, p. 36).\n\nOrientações para o fórum:\nParticipação mínima: duas contribuições.\nPrimeira participação: responda aos questionamentos propostos no enunciado da atividade, apresentando sua pesquisa e exemplo.\nSegunda participação: complemente, pergunte ou contra-argumente com base nas participações dos seus colegas e/ou professor(a).",
+        "data_inicio": "19/04/2026",
+        "data_fim": "26/04/2026"
+      },
+      "quiz": null,
+      "wiki": {
+        "titulo": "[Aula 2] [Wiki] Materiais Manipuláveis no LEM",
+        "nota": 10,
+        "descricao": "Construa colaborativamente uma wiki catalogando os principais materiais didáticos manipuláveis utilizados no LEM. Para cada material, inclua: nome, descrição, conteúdo matemático que pode ser explorado e uma sugestão de atividade prática.\n\nExemplos de materiais: Tangram, Material Dourado, Geoplano, Blocos Lógicos, Ábaco, Torre de Hanói.",
+        "data_inicio": "19/04/2026",
+        "data_fim": "26/04/2026",
+        "nota_titulo": "[Aula 2] [Wiki] Materiais Manipuláveis no LEM [10]"
+      },
+      "glossario": null,
+      "chat": null,
+      "tarefa": null
+    },
+    {
+      "numero": 3,
+      "titulo": "LEM: novas tecnologias e modelagem matemática para o ensino de álgebra e geometria",
+      "descricao": "Caro(a) aluno(a),\n\nNa Aula 3, exploraremos como diferentes tecnologias, como softwares e dobraduras, podem auxiliar no processo de ensino-aprendizagem da Matemática. Também discutiremos o papel da calculadora como uma ferramenta para potencializar a participação e a aprendizagem dos alunos nas aulas de Matemática.\n\nAlém disso, estudaremos como a modelagem matemática, em conjunto com softwares dinâmicos, pode contribuir para uma aprendizagem mais contextualizada, focada na aplicação da Matemática em situações do cotidiano e na resolução de problemas.\n\nEstamos certos de que esse estudo trará novas perspectivas e ferramentas práticas para enriquecer suas aulas de Matemática.",
+      "data_inicio": "26/04/2026",
+      "data_fim": "03/05/2026",
+      "forum": {
+        "titulo": "[Aula 3] [Fórum 3] Novas tecnologias e modelagem matemática [5]",
+        "nota": 5,
+        "descricao": "Nesta aula, discutimos a importância do LEM: novas tecnologias e modelagem matemática para o ensino de álgebra e geometria. Como atividade, realize uma pesquisa sobre o uso da modelagem matemática no processo de ensino e aprendizagem.\n\nOrientações para o fórum:\nParticipação mínima: duas contribuições.\nPrimeira participação: responda aos questionamentos propostos no enunciado da atividade, apresentando sua pesquisa e exemplo.\nSegunda participação: complemente, pergunte ou contra-argumente com base nas participações dos seus colegas e/ou professor(a).",
+        "data_inicio": "26/04/2026",
+        "data_fim": "03/05/2026"
+      },
+      "quiz": null,
+      "wiki": null,
+      "glossario": {
+        "titulo": "[Aula 3] [Glossário] Tecnologias e Modelagem Matemática",
+        "nota": 10,
+        "descricao": "Construa um glossário colaborativo com os principais termos e conceitos abordados nesta aula. Cada aluno deve contribuir com pelo menos 2 termos, incluindo definição e um exemplo de aplicação no contexto do ensino de matemática.\n\nSugestões de termos: Modelagem Matemática, GeoGebra, Software Dinâmico, Geometria Interativa, Calculadora Científica, Dobraduras em Geometria, Álgebra Visual.",
+        "data_inicio": "26/04/2026",
+        "data_fim": "03/05/2026"
+      },
+      "chat": null,
+      "tarefa": {
+        "titulo": "[Aula 3] [Tarefa 3] LEM: novas tecnologias e modelagem matemática para o ensino de álgebra e geometria [10]",
+        "nota": 10,
+        "descricao": "Clique no link Aula 3 – Tarefa 3, faça o download do arquivo. Responda às questões propostas e depois deposite sua atividade neste espaço.",
+        "data_inicio": "26/04/2026",
+        "data_fim": "03/05/2026",
+        "arquivos": [
+          {
+            "filename": "tarefa_3.docx",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_3.docx"
+          },
+          {
+            "filename": "tarefa_3.pdf",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_3.pdf"
+          }
+        ]
+      }
+    },
+    {
+      "numero": 4,
+      "titulo": "Atividades de pesquisa em educação matemática como apoio à formação docente",
+      "descricao": "Prezado(a) cursista,\n\nNa Aula 4, exploraremos como as atividades de pesquisa em Educação Matemática podem contribuir tanto para a formação de futuros professores quanto para a prática docente daqueles já atuantes em sala de aula.\n\nAlém disso, conheceremos as principais tendências temáticas e metodológicas na pesquisa em Educação Matemática, destacando como elas podem oferecer diferentes caminhos para a realização de uma pesquisa.\n\nPor fim, discutiremos a relevância do trabalho coletivo no planejamento e na execução de uma pesquisa qualitativa em Educação Matemática, bem como sua aplicação na resolução de problemas.\n\nVamos juntos aprofundar esse estudo!",
+      "data_inicio": "03/05/2026",
+      "data_fim": "10/05/2026",
+      "forum": {
+        "titulo": "[Aula 4] [Fórum 4] Atividades de pesquisa em educação matemática como apoio à formação docente [5]",
+        "nota": 5,
+        "descricao": "Nesta aula, discutimos a importância da Atividades de pesquisa em educação matemática como apoio à formação docente. Assim realize uma pesquisa sobre algumas atividades na área da educação matemática que contribuam para a melhoraria do processo de ensino e aprendizagem.\n\nOrientações para o fórum:\nParticipação mínima: duas contribuições.\nPrimeira participação: responda aos questionamentos propostos no enunciado da atividade, apresentando sua pesquisa e exemplo.\nSegunda participação: complemente, pergunte ou contra-argumente com base nas participações dos seus colegas e/ou professor(a).",
+        "data_inicio": "03/05/2026",
+        "data_fim": "10/05/2026"
+      },
+      "quiz": null,
+      "wiki": null,
+      "glossario": null,
+      "chat": {
+        "titulo": "[Aula 4] [Chat] Discussão sobre Pesquisa em Educação Matemática",
+        "nota": 10,
+        "descricao": "Participe do chat para discutir as principais tendências de pesquisa em Educação Matemática abordadas nesta aula. Compartilhe suas experiências e dúvidas sobre como a pesquisa pode apoiar a formação e a prática docente.\n\nTemas sugeridos para discussão:\n- Quais tendências de pesquisa em Educação Matemática você considera mais relevantes para sua formação?\n- Como a pesquisa qualitativa pode contribuir para a melhoria do ensino de Matemática?\n- Qual a importância do trabalho coletivo na pesquisa em Educação Matemática?",
+        "data_inicio": "03/05/2026",
+        "data_fim": "10/05/2026",
+        "nota_titulo": "[Aula 4] [Chat] Discussão sobre Pesquisa em Educação Matemática [10]"
+      },
+      "tarefa": null
+    },
+    {
+      "numero": 5,
+      "titulo": "Elaboração do projeto do LEM",
+      "descricao": "Prezado(a) aluno(a),\n\nNa Aula 5, vamos iniciar a elaboração do projeto do LEM como atividade, iremos escolher o tema do projeto e em seguida iniciar a introdução.\n\nVamos juntos começar esse projeto.",
+      "data_inicio": "10/05/2026",
+      "data_fim": "17/05/2026",
+      "forum": null,
+      "quiz": {
+        "titulo": "[Aula 5] [Questionário 2] Revisão dos conteúdos das Aulas 1 a 4 [10]",
+        "nota": 10,
+        "data_inicio": "10/05/2026",
+        "data_fim": "17/05/2026",
+        "questoes": [
+          {
+            "numero": 1,
+            "tipo": "multipla_escolha",
+            "enunciado": "Qual material didático manipulável é composto por sete peças geométricas que formam um quadrado e pode ser utilizado para explorar conceitos de área e frações?",
+            "pontuacao": 2,
+            "itens": [
+              { "texto": "Geoplano", "isCorrect": false },
+              { "texto": "Tangram", "isCorrect": true },
+              { "texto": "Material Dourado", "isCorrect": false },
+              { "texto": "Ábaco", "isCorrect": false }
+            ]
+          },
+          {
+            "numero": 2,
+            "tipo": "multipla_escolha",
+            "enunciado": "O GeoGebra é um software de matemática dinâmica que permite trabalhar com:",
+            "pontuacao": 2,
+            "itens": [
+              { "texto": "Apenas geometria plana.", "isCorrect": false },
+              { "texto": "Geometria, álgebra, cálculo e estatística de forma integrada.", "isCorrect": true },
+              { "texto": "Apenas cálculo diferencial e integral.", "isCorrect": false },
+              { "texto": "Somente planilhas eletrônicas.", "isCorrect": false }
+            ]
+          },
+          {
+            "numero": 3,
+            "tipo": "associativa",
+            "enunciado": "Associe cada material/tecnologia ao conteúdo matemático mais diretamente relacionado:",
+            "pontuacao": 3,
+            "itens": [
+              { "texto": "Material Dourado", "resposta": "Sistema de numeração decimal e operações básicas" },
+              { "texto": "Geoplano", "resposta": "Geometria plana, perímetro e área" },
+              { "texto": "GeoGebra", "resposta": "Geometria dinâmica e gráficos de funções" },
+              { "texto": "Torre de Hanói", "resposta": "Raciocínio lógico e potências de 2" }
+            ]
+          },
+          {
+            "numero": 4,
+            "tipo": "dissertativa",
+            "enunciado": "Descreva como você estruturaria um projeto de LEM em uma escola de Ensino Fundamental, considerando os recursos disponíveis e o público-alvo. Justifique suas escolhas de materiais e tecnologias.",
+            "pontuacao": 3,
+            "feedback": "Considere as concepções de Lorenzato, os materiais manipuláveis estudados e as tecnologias abordadas nas aulas anteriores."
+          }
+        ]
+      },
+      "wiki": null,
+      "glossario": null,
+      "chat": null,
+      "tarefa": {
+        "titulo": "[Aula 5] [Tarefa 5] Elaboração do projeto do LEM [10]",
+        "nota": 10,
+        "descricao": "Clique no link Aula 5 – Tarefa 5, faça o download do arquivo. Responda às questões propostas e depois deposite sua atividade neste espaço.",
+        "data_inicio": "10/05/2026",
+        "data_fim": "17/05/2026",
+        "arquivos": [
+          {
+            "filename": "tarefa_5.docx",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_5.docx"
+          },
+          {
+            "filename": "tarefa_5.pdf",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_5.pdf"
+          }
+        ]
+      }
+    },
+    {
+      "numero": 6,
+      "titulo": "Cont. na elaboração do projeto do LEM",
+      "descricao": "Olá, prezado(a) cursista!\n\nNa Aula 6, vamos continuar com a elaboração do projeto do LEM. Na atividade iremos escrever o objetivo geral e os objetivos específicos.\n\nVamos juntos continuar o projeto!",
+      "data_inicio": "17/05/2026",
+      "data_fim": "24/05/2026",
+      "forum": null,
+      "quiz": null,
+      "wiki": {
+        "titulo": "[Aula 6] [Wiki] Referências e Boas Práticas para o Projeto do LEM",
+        "nota": 10,
+        "descricao": "Construa colaborativamente uma wiki reunindo referências bibliográficas, artigos, relatos de experiência e boas práticas para a elaboração do projeto do LEM. Organize por categorias: fundamentação teórica, exemplos de projetos, recursos disponíveis e dicas práticas.",
+        "data_inicio": "17/05/2026",
+        "data_fim": "24/05/2026",
+        "nota_titulo": "[Aula 6] [Wiki] Referências e Boas Práticas para o Projeto do LEM [10]"
+      },
+      "glossario": {
+        "titulo": "[Aula 6] [Glossário] Termos do Projeto de LEM",
+        "nota": 5,
+        "descricao": "Construa um glossário colaborativo com os termos técnicos e conceitos utilizados na elaboração de um projeto de LEM. Cada aluno deve contribuir com pelo menos 2 termos.\n\nSugestões: Objetivo Geral, Objetivo Específico, Metodologia, Justificativa, Público-alvo, Cronograma, Avaliação.",
+        "data_inicio": "17/05/2026",
+        "data_fim": "24/05/2026"
+      },
+      "chat": null,
+      "tarefa": {
+        "titulo": "[Aula 6] [Tarefa 6] Elaboração do projeto do LEM [10]",
+        "nota": 10,
+        "descricao": "Clique no link Aula 6 – Tarefa 6, faça o download do arquivo. Responda às questões propostas e depois deposite sua atividade neste espaço.",
+        "data_inicio": "17/05/2026",
+        "data_fim": "24/05/2026",
+        "arquivos": [
+          {
+            "filename": "tarefa_6.docx",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_6.docx"
+          },
+          {
+            "filename": "tarefa_6.pdf",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_6.pdf"
+          }
+        ]
+      }
+    },
+    {
+      "numero": 7,
+      "titulo": "Cont. na elaboração do projeto do LEM",
+      "descricao": "Caro(a) discente,\n\nNa Aula 7, vamos continuar com elaboração do projeto do LEM, como atividade iremos escrever a metodologia do projeto.\n\nVamos juntos continuar o projeto.",
+      "data_inicio": "24/05/2026",
+      "data_fim": "31/05/2026",
+      "forum": null,
+      "quiz": null,
+      "wiki": null,
+      "glossario": null,
+      "chat": {
+        "titulo": "[Aula 7] [Chat] Troca de Experiências sobre Metodologia do Projeto",
+        "nota": 10,
+        "descricao": "Participe do chat para trocar experiências e discutir a metodologia do seu projeto do LEM. Compartilhe as abordagens escolhidas, dificuldades encontradas e sugestões para os colegas.\n\nPontos para discussão:\n- Qual metodologia você está utilizando no seu projeto?\n- Como pretende aplicar os materiais manipuláveis e/ou tecnologias no projeto?\n- Quais dificuldades está enfrentando na elaboração da metodologia?",
+        "data_inicio": "24/05/2026",
+        "data_fim": "31/05/2026",
+        "nota_titulo": "[Aula 7] [Chat] Troca de Experiências sobre Metodologia do Projeto [10]"
+      },
+      "tarefa": null
+    },
+    {
+      "numero": 8,
+      "titulo": "Cont. na elaboração do projeto do LEM",
+      "descricao": "Caríssimo(a) aluno(a),\n\nNa Aula 8, vamos finalizar a elaboração do projeto do LEM. Na atividade iremos escrever os resultados e a conclusão do projeto.\n\nVamos juntos concluir o projeto.",
+      "data_inicio": "31/05/2026",
+      "data_fim": "07/06/2026",
+      "forum": null,
+      "quiz": null,
+      "wiki": null,
+      "glossario": null,
+      "chat": null,
+      "tarefa": {
+        "titulo": "[Aula 8] [Tarefa 8] Elaboração do projeto do LEM [10]",
+        "nota": 10,
+        "descricao": "Clique no link Aula 8 – Tarefa 8, faça o download do arquivo. Responda às questões propostas e depois deposite sua atividade neste espaço.",
+        "data_inicio": "31/05/2026",
+        "data_fim": "07/06/2026",
+        "arquivos": [
+          {
+            "filename": "tarefa_8.docx",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_8.docx"
+          },
+          {
+            "filename": "tarefa_8.pdf",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_8.pdf"
+          }
+        ]
+      }
+    }
+  ],
+  "apresentacao": "Caro(a) aluno(a),\n\nSeja bem-vindo à disciplina de Laboratório de Ensino de Matemática.\nNesta disciplina, exploraremos o Laboratório de Ensino de Matemática (LEM), analisando o que esse espaço representa para o ensino de Matemática e como o professor pode estruturá-lo na escola, transformando-o em um ambiente de grande potencial para a aprendizagem.",
+  "encontros": [
+    {
+      "numero": 1,
+      "titulo": "1º Encontro VIRTUAL (NOITE 19h às 21h - quarta-feira) - 15/04/2025",
+      "descricao": "Neste encontro, será compartilhado com os estudantes a apresentação da equipe, da metodologia do curso, dos acordos pedagógicos e, por fim, do conteúdo programático das aulas 1, 2 e 3, como também aproveitará o momento da aula para tirar dúvidas referente aos conteúdos e atividades da Aula 1.\n\nOrientações e início da atividade da PCC.",
+      "data": "15/04/2025",
+      "turnos": 1,
+      "avaliacao": "sem_nota",
+      "peso": 0,
+      "nota_titulo": "[Encontro Presencial] [Avaliação y] [ ]",
+      "falta_titulo": "[Encontro Presencial X] [Faltas] [1]"
+    },
+    {
+      "numero": 2,
+      "titulo": "2º Encontro PRESENCIAL (MANHÃ - 8h às 12h) + AVALIAÇÃO I (tarde 13h às 17h) - 02/05/2026 - sábado",
+      "descricao": "Neste encontro, o(a) tutor(a) compartilhará com os estudantes no período da manhã uma revisão dos conteúdos estudados nas aulas 1, 2 e 3 da disciplina e no período da tarde corresponderá a realização da Avaliação I.\n\nContinuidade nas orientações sobre a PCC.",
+      "data": "02/05/2026",
+      "turnos": 2,
+      "avaliacao": "nota_media",
+      "peso": 50,
+      "nota_titulo": "[Encontro Presencial II] [Avaliação I] [50]",
+      "falta_titulo": "[Encontro Presencial II] [Faltas] [2]"
+    },
+    {
+      "numero": 3,
+      "titulo": "3º Encontro VIRTUAL (NOITE 19h às 21h - quarta-feira) - 20/05/2026",
+      "descricao": "Neste encontro, o(a) tutor(a) compartilhará com os estudantes os conteúdos a serem estudados nas Aulas 4, 5 e 6, como também aproveitará o momento da aula para tirar dúvidas referente aos conteúdos e atividades das Aulas 4 e 5.\n\nContinuidade nas orientações sobre a PCC",
+      "data": "20/05/2026",
+      "turnos": 1,
+      "avaliacao": "sem_nota",
+      "peso": 0,
+      "nota_titulo": "[Encontro Presencial] [Avaliação Y] [Peso]",
+      "falta_titulo": "[Encontro Presencial X] [Faltas] [1]"
+    },
+    {
+      "numero": 4,
+      "titulo": "4º Encontro PRESENCIAL (MANHÃ - 8h às 12h) + AVALIAÇÃO II (tarde 13h às 17h) - 06/06/2026 - sábado",
+      "descricao": "Neste encontro o(a) tutor(a) compartilhará com os estudantes uma revisão dos conteúdos das aulas 6, 7 e 8 da disciplina e no período da tarde corresponderá a realização da Avaliação II.\n\nNota da PCC - Relatório postado no AVA -  30%\nNota da Avaliação II - Apresentação do relatório - 20%",
+      "data": "06/06/2026",
+      "turnos": 2,
+      "avaliacao": "nota_media",
+      "peso": 50,
+      "nota_titulo": "[Encontro Presencial IV] [Avaliação II] [50]",
+      "falta_titulo": "[Encontro Presencial IV] [Faltas] [2]"
+    }
+  ],
+  "avaliacao_final": {
+    "titulo": "[Disciplina] [Avaliação Final]",
+    "descricao": "Avaliação final da disciplina.",
+    "data": "22/06/2026"
+  },
+  "frequencia": {
+    "percentual_minimo": 75,
+    "observacoes": "mínimo de 75% de presença exigido"
+  },
+  "livro_de_notas": {
+    "categorias": [
+      {
+        "nome": "Atividades a distância",
+        "peso": 40
+      },
+      {
+        "nome": "Atividades presenciais",
+        "peso": 60
+      }
+    ]
+  },
+  "bibliografia": {
+    "basica": [],
+    "complementar": []
+  }
+}

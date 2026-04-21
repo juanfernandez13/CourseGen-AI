@@ -125,6 +125,10 @@ body {
   color: var(--text-1);
 }
 
+/* ─── Date inputs ───────────────────────────────────────────────────────── */
+[data-theme="dark"] input[type="date"] { color-scheme: dark; }
+[data-theme="light"] input[type="date"] { color-scheme: light; }
+
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar        { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track  { background: var(--bg); }

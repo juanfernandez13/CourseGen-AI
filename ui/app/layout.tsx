@@ -6,8 +6,8 @@ import { ThemeProvider, ThemeToggle } from './components/ThemeProvider';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'IFCE — Matriz DE → Moodle',
-  description: 'Gerador de pacotes MBZ para Moodle a partir de matrizes de disciplinas do IFCE',
+  title: 'CourseGen AI',
+  description: 'Gerador inteligente de pacotes MBZ para Moodle com IA',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,16 +32,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   className="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 font-black text-sm select-none"
                   style={{ background: 'var(--primary)', color: '#fff', letterSpacing: '-0.5px' }}
                 >
-                  IF
+                  AI
                 </div>
                 <div className="flex flex-col leading-none">
                   <span className="text-sm font-bold tracking-tight" style={{ color: 'var(--header-text)' }}>
-                    Matriz DE
-                    <span style={{ margin: '0 6px', opacity: 0.45 }}>→</span>
-                    Moodle
+                    CourseGen
+                    <span style={{ margin: '0 4px', opacity: 0.6, fontSize: '0.7em', verticalAlign: 'middle', letterSpacing: '0.05em' }}>AI</span>
                   </span>
                   <span className="text-xs mt-0.5" style={{ color: 'var(--header-sub)' }}>
-                    IFCE · Gerador de backup MBZ
+                    Gerador inteligente de backup MBZ
                   </span>
                 </div>
               </div>

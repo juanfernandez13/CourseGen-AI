@@ -2,6 +2,8 @@
 
 import { useRef, useState, DragEvent, ChangeEvent } from 'react';
 import { extractJson, extractQuizzes } from '../lib/api';
+import FileViewer from './FileViewer';
+import type { useJsonHistory } from '../lib/useJsonHistory';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mergeQuizQuestions(data: any, quizzes: { questoes: unknown[] }[]) {
@@ -23,6 +25,7 @@ type Props = {
   onQuizzesChange: (files: File[]) => void;
   onTarefasChange: (files: File[]) => void;
   onExtracted: (json: string) => void;
+  history?: ReturnType<typeof useJsonHistory>;
 };
 
 function Spinner() {
@@ -42,7 +45,7 @@ const EXT_COLORS: Record<string, string> = {
   ppt:  '#fb923c',
 };
 
-function FileChip({ name, badge, onRemove }: { name: string; badge?: string; onRemove: () => void }) {
+function FileChip({ name, badge, onRemove, onView }: { name: string; badge?: string; onRemove: () => void; onView?: () => void }) {
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
   const color = EXT_COLORS[ext] ?? 'var(--primary)';
 
@@ -71,6 +74,19 @@ function FileChip({ name, badge, onRemove }: { name: string; badge?: string; onR
       >
         {name}
       </span>
+      {onView && (
+        <button
+          onClick={e => { e.stopPropagation(); onView(); }}
+          className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium transition-all"
+          style={{ background: 'var(--primary-dim)', color: 'var(--primary)', border: '1px solid var(--primary-ring)' }}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2" />
+            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+          </svg>
+          Ver
+        </button>
+      )}
       <button
         onClick={e => { e.stopPropagation(); onRemove(); }}
         className="flex items-center justify-center rounded p-0.5 transition-colors hover:bg-red-500/10"
@@ -171,7 +187,7 @@ function UploadCard({
 /* ─── Main ───────────────────────────────────────────────────────────────────── */
 export default function UploadStep({
   matrizFile, quizFiles, tarefaFiles,
-  onMatrizChange, onQuizzesChange, onTarefasChange, onExtracted,
+  onMatrizChange, onQuizzesChange, onTarefasChange, onExtracted, history,
 }: Props) {
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
@@ -181,6 +197,7 @@ export default function UploadStep({
   const [showJsonPanel, setShowJsonPanel] = useState(false);
   const [manualJson, setManualJson]   = useState('');
   const [dragJson, setDragJson]       = useState(false);
+  const [viewFile, setViewFile]       = useState<File | null>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
   async function handleExtract() {
@@ -251,7 +268,7 @@ export default function UploadStep({
           }
         >
           {matrizFile ? (
-            <FileChip name={matrizFile.name} onRemove={() => onMatrizChange(null)} />
+            <FileChip name={matrizFile.name} onRemove={() => onMatrizChange(null)} onView={() => setViewFile(matrizFile)} />
           ) : (
             <DropZone
               accept=".docx,.doc"
@@ -291,7 +308,8 @@ export default function UploadStep({
             <div className="flex flex-col gap-1.5 mt-1">
               {quizFiles.map((f, i) => (
                 <FileChip key={`${f.name}-${i}`} name={f.name} badge={`Q${i + 1}`}
-                  onRemove={() => onQuizzesChange(quizFiles.filter((_, idx) => idx !== i))} />
+                  onRemove={() => onQuizzesChange(quizFiles.filter((_, idx) => idx !== i))}
+                  onView={() => setViewFile(f)} />
               ))}
             </div>
           )}
@@ -321,7 +339,8 @@ export default function UploadStep({
             <div className="flex flex-col gap-1.5 mt-1">
               {tarefaFiles.map((f, i) => (
                 <FileChip key={`${f.name}-${i}`} name={f.name}
-                  onRemove={() => onTarefasChange(tarefaFiles.filter((_, idx) => idx !== i))} />
+                  onRemove={() => onTarefasChange(tarefaFiles.filter((_, idx) => idx !== i))}
+                  onView={() => setViewFile(f)} />
               ))}
             </div>
           )}
@@ -427,6 +446,59 @@ export default function UploadStep({
       </div>
       </div>
 
+      {/* Previous versions from localStorage */}
+      {history && history.versions.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-xl p-4"
+          style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points="3,4 3,8 7,8" stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 7v5l4 2" stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Versões anteriores</span>
+              <span className="text-xs px-1.5 py-0.5 rounded-md" style={{ background: 'var(--surface)', color: 'var(--text-3)' }}>
+                {history.versions.length}
+              </span>
+            </div>
+            <button onClick={history.clear}
+              className="text-xs px-2 py-1 rounded-md"
+              style={{ color: 'var(--error)', background: 'var(--error-dim)', border: '1px solid var(--error-border)' }}>
+              Limpar tudo
+            </button>
+          </div>
+          <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
+            {history.versions.map(v => (
+              <div key={v.id}
+                className="flex items-center gap-3 rounded-lg px-3 py-2"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border-subtle)' }}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate" style={{ color: 'var(--text-1)' }}>{v.label}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-4)' }}>
+                    {new Date(v.timestamp).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => onExtracted(v.json)}
+                  className="text-xs px-2.5 py-1 rounded-md font-medium shrink-0"
+                  style={{ background: 'var(--primary-dim)', color: 'var(--primary)', border: '1px solid var(--primary-ring)' }}>
+                  Restaurar
+                </button>
+                <button onClick={() => history.remove(v.id)}
+                  className="flex items-center justify-center w-6 h-6 rounded-md shrink-0"
+                  style={{ color: 'var(--text-4)' }}
+                  title="Remover">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* Toggle JSON manual panel */}
         <button
@@ -469,6 +541,8 @@ export default function UploadStep({
           )}
         </button>
       </div>
+
+      {viewFile && <FileViewer file={viewFile} onClose={() => setViewFile(null)} />}
     </div>
   );
 }
