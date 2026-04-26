@@ -5,9 +5,12 @@ import path from 'path';
 import { extractAllQuizzes } from '../../../server/extractor';
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.GEMINI_KEY;
+  const apiKey = req.headers.get('x-gemini-key')?.trim() || process.env.GEMINI_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: 'GEMINI_KEY não configurada no .env' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Nenhuma chave do Gemini disponível. Configure em ⚙ Configurações ou no .env do servidor.' },
+      { status: 401 },
+    );
   }
 
   const formData = await req.formData();

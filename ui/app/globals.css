@@ -1,112 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
-/* ─── IFCE Dark Theme (default) ─────────────────────────────────────────── */
+/* ─── CourseGen · dir-b SaaS dark (default) ──────────────────────────────── */
 :root,
 [data-theme="dark"] {
-  --bg:             #0c1c12;
-  --surface:        #14271a;
-  --card:           #1c3424;
-  --border:         #2a4a35;
-  --border-subtle:  #1e3828;
+  /* canvas / surfaces */
+  --bg:             #0a0a0c;
+  --surface:        #111114;
+  --surface-2:      #18181d;
+  --surface-3:      #1f1f25;
+  --card:           #18181d;
+  --border:         #27272f;
+  --border-subtle:  #1f1f25;
+  --line:           #27272f;
+  --line-2:         #34343d;
 
-  --text-1: #e6f4eb;
-  --text-2: #8db89b;
-  --text-3: #607d6c;
-  --text-4: #3d5447;
+  /* ink */
+  --text-1: #ededf0;
+  --text-2: #a1a1aa;
+  --text-3: #71717a;
+  --text-4: #52525a;
+  --ink:    #ededf0;
+  --ink-2:  #a1a1aa;
+  --ink-3:  #71717a;
 
-  --primary:       #00b865;
-  --primary-hover: #00d478;
-  --primary-dim:   #0d2e1a;
-  --primary-ring:  rgba(0, 184, 101, 0.25);
-  --primary-text:  #ffffff;
+  /* accent (indigo) */
+  --accent:        #818cf8;
+  --accent-2:      #a78bfa;
+  --accent-soft:   rgba(129, 140, 248, 0.12);
+  --accent-ink:    #c7d2fe;
 
+  --primary:       #818cf8;
+  --primary-hover: #a78bfa;
+  --primary-dim:   rgba(129, 140, 248, 0.12);
+  --primary-ring:  rgba(129, 140, 248, 0.30);
+  --primary-text:  #0a0a0c;
+
+  /* activity tones */
   --quiz:        #a78bfa;
-  --quiz-dim:    #1e1630;
-  --quiz-border: #3b2d6a;
+  --quiz-dim:    rgba(167, 139, 250, 0.10);
+  --quiz-border: rgba(167, 139, 250, 0.28);
 
-  --tarefa:        #34d399;
-  --tarefa-dim:    #0d2520;
-  --tarefa-border: #1e5040;
+  --tarefa:        #4ade80;
+  --tarefa-dim:    rgba(74, 222, 128, 0.08);
+  --tarefa-border: rgba(74, 222, 128, 0.25);
 
   --forum:        #60a5fa;
-  --forum-dim:    #0d1e30;
-  --forum-border: #1e3d6a;
+  --forum-dim:    rgba(96, 165, 250, 0.09);
+  --forum-border: rgba(96, 165, 250, 0.25);
+
+  /* status */
+  --ok:     #4ade80;
+  --warn:   #fbbf24;
+  --danger: #f87171;
 
   --error:        #f87171;
-  --error-dim:    #2a1010;
-  --error-border: #5a2020;
+  --error-dim:    rgba(248, 113, 113, 0.08);
+  --error-border: rgba(248, 113, 113, 0.28);
   --error-text:   #fca5a5;
 
-  --header-bg:     #071410;
-  --header-border: #162a1c;
-  --header-text:   #e6f4eb;
-  --header-sub:    #547a61;
+  /* header (BNav) */
+  --header-bg:     #111114;
+  --header-border: #27272f;
+  --header-text:   #ededf0;
+  --header-sub:    #71717a;
 
-  --step-bg-active: #00b865;
-  --step-bg-idle:   #1c3424;
-  --step-text-active: #ffffff;
-  --step-text-idle:   #8db89b;
-  --step-border-active: #00b865;
-  --step-border-idle:   #2a4a35;
-  --step-line-done: #00b865;
-  --step-line-idle: #1c3424;
-  --step-label-active: #e6f4eb;
-  --step-label-idle:   #607d6c;
-  --step-shadow: 0 0 0 3px rgba(0, 184, 101, 0.22);
+  /* step indicator */
+  --step-bg-active:     #818cf8;
+  --step-bg-idle:       #18181d;
+  --step-text-active:   #0a0a0c;
+  --step-text-idle:     #71717a;
+  --step-border-active: #818cf8;
+  --step-border-idle:   #27272f;
+  --step-line-done:     #818cf8;
+  --step-line-idle:     #1f1f25;
+  --step-label-active:  #ededf0;
+  --step-label-idle:    #71717a;
+  --step-shadow:        0 0 0 3px rgba(129, 140, 248, 0.22);
+
+  /* type */
+  --font-sans: 'Geist', 'Inter', -apple-system, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+
+  /* radii */
+  --r-sm: 3px;
+  --r-md: 5px;
+  --r-lg: 8px;
 }
 
-/* ─── IFCE Light Theme ───────────────────────────────────────────────────── */
+/* ─── Light theme (editorial light variant of indigo) ────────────────────── */
 [data-theme="light"] {
-  --bg:             #f0faf4;
+  --bg:             #fafafb;
   --surface:        #ffffff;
-  --card:           #e8f5ee;
-  --border:         #b8d9c4;
-  --border-subtle:  #d4eddc;
+  --surface-2:      #f4f4f5;
+  --surface-3:      #e4e4e7;
+  --card:           #ffffff;
+  --border:         #e4e4e7;
+  --border-subtle:  #f4f4f5;
+  --line:           #e4e4e7;
+  --line-2:         #d4d4d8;
 
-  --text-1: #0a1f10;
-  --text-2: #255c38;
-  --text-3: #4a7a5a;
-  --text-4: #8ab89a;
+  --text-1: #18181d;
+  --text-2: #52525a;
+  --text-3: #71717a;
+  --text-4: #a1a1aa;
+  --ink:    #18181d;
+  --ink-2:  #52525a;
+  --ink-3:  #71717a;
 
-  --primary:       #006633;
-  --primary-hover: #00843f;
-  --primary-dim:   #d4eddc;
-  --primary-ring:  rgba(0, 102, 51, 0.22);
+  --accent:        #4f46e5;
+  --accent-2:      #6d28d9;
+  --accent-soft:   rgba(79, 70, 229, 0.10);
+  --accent-ink:    #3730a3;
+
+  --primary:       #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-dim:   rgba(79, 70, 229, 0.10);
+  --primary-ring:  rgba(79, 70, 229, 0.25);
   --primary-text:  #ffffff;
 
   --quiz:        #6d28d9;
-  --quiz-dim:    #ede9fe;
-  --quiz-border: #c4b5fd;
+  --quiz-dim:    rgba(109, 40, 217, 0.08);
+  --quiz-border: rgba(109, 40, 217, 0.25);
 
-  --tarefa:        #047857;
-  --tarefa-dim:    #d1fae5;
-  --tarefa-border: #6ee7b7;
+  --tarefa:        #15803d;
+  --tarefa-dim:    rgba(21, 128, 61, 0.08);
+  --tarefa-border: rgba(21, 128, 61, 0.22);
 
   --forum:        #1d4ed8;
-  --forum-dim:    #dbeafe;
-  --forum-border: #93c5fd;
+  --forum-dim:    rgba(29, 78, 216, 0.08);
+  --forum-border: rgba(29, 78, 216, 0.22);
+
+  --ok:     #15803d;
+  --warn:   #b45309;
+  --danger: #b91c1c;
 
   --error:        #dc2626;
-  --error-dim:    #fee2e2;
-  --error-border: #fca5a5;
+  --error-dim:    rgba(220, 38, 38, 0.08);
+  --error-border: rgba(220, 38, 38, 0.22);
   --error-text:   #991b1b;
 
-  --header-bg:     #006633;
-  --header-border: #004d26;
-  --header-text:   #ffffff;
-  --header-sub:    rgba(255, 255, 255, 0.65);
+  --header-bg:     #ffffff;
+  --header-border: #e4e4e7;
+  --header-text:   #18181d;
+  --header-sub:    #71717a;
 
-  --step-bg-active:     #006633;
-  --step-bg-idle:       #d4eddc;
+  --step-bg-active:     #4f46e5;
+  --step-bg-idle:       #f4f4f5;
   --step-text-active:   #ffffff;
-  --step-text-idle:     #255c38;
-  --step-border-active: #006633;
-  --step-border-idle:   #b8d9c4;
-  --step-line-done:     #006633;
-  --step-line-idle:     #b8d9c4;
-  --step-label-active:  #0a1f10;
-  --step-label-idle:    #4a7a5a;
-  --step-shadow: 0 0 0 3px rgba(0, 102, 51, 0.20);
+  --step-text-idle:     #71717a;
+  --step-border-active: #4f46e5;
+  --step-border-idle:   #e4e4e7;
+  --step-line-done:     #4f46e5;
+  --step-line-idle:     #e4e4e7;
+  --step-label-active:  #18181d;
+  --step-label-idle:    #71717a;
+  --step-shadow:        0 0 0 3px rgba(79, 70, 229, 0.22);
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */
@@ -115,7 +164,8 @@
 body {
   background-color: var(--bg);
   color: var(--text-1);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
@@ -125,12 +175,36 @@ body {
   color: var(--text-1);
 }
 
-/* ─── Date inputs ───────────────────────────────────────────────────────── */
 [data-theme="dark"] input[type="date"] { color-scheme: dark; }
 [data-theme="light"] input[type="date"] { color-scheme: light; }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
-::-webkit-scrollbar        { width: 6px; height: 6px; }
-::-webkit-scrollbar-track  { background: var(--bg); }
-::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+::-webkit-scrollbar        { width: 8px; height: 8px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--surface-3); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--line-2); }
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@keyframes blink {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@keyframes logLineIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.font-mono-ui {
+  font-family: var(--font-mono);
+  font-feature-settings: normal;
+}
+
+/* mono labels uppercase (per dir-b spec) */
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}

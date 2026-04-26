@@ -42,11 +42,10 @@ export function ThemeToggle() {
     <button
       onClick={toggle}
       title={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
-      className="flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200"
+      className="flex items-center justify-center w-7 h-7 rounded-[5px] transition-colors hover:bg-(--surface-3)"
       style={{
-        background: 'var(--primary-dim)',
-        border: '1px solid var(--border)',
-        color: 'var(--header-text)',
+        background: 'transparent',
+        color: 'var(--ink-2)',
       }}
     >
       {isDark ? (

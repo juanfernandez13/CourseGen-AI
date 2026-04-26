@@ -8,6 +8,7 @@ import DoneStep from './components/DoneStep';
 import BuilderStep from './components/BuilderStep';
 import { generateMbz } from './lib/api';
 import { useJsonHistory } from './lib/useJsonHistory';
+import { usePersistedFiles } from './lib/usePersistedFiles';
 
 type Mode = 'upload' | 'builder';
 type Step = 1 | 2 | 3;
@@ -15,9 +16,8 @@ type Step = 1 | 2 | 3;
 export default function Home() {
   const [mode, setMode]           = useState<Mode>('upload');
   const [step, setStep]           = useState<Step>(1);
-  const [matrizFile, setMatrizFile]   = useState<File | null>(null);
-  const [quizFiles, setQuizFiles]     = useState<File[]>([]);
-  const [tarefaFiles, setTarefaFiles] = useState<File[]>([]);
+  const files = usePersistedFiles();
+  const { matrizFile, quizFiles, tarefaFiles, setMatrizFile, setQuizFiles, setTarefaFiles, clearAllFiles } = files;
   const [extractedJson, setExtractedJson] = useState<string>('');
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState<string | null>(null);
@@ -55,11 +55,9 @@ export default function Home() {
     }
   }
 
-  function handleReset() {
+  async function handleReset() {
     setStep(1);
-    setMatrizFile(null);
-    setQuizFiles([]);
-    setTarefaFiles([]);
+    await clearAllFiles();
     setExtractedJson('');
     setError(null);
     setLoading(false);
@@ -76,40 +74,38 @@ export default function Home() {
     <div className="flex flex-col">
       <StepIndicator currentStep={step} onNavigate={handleNavigate} />
 
-      <div className="rounded-2xl p-6 sm:p-8"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <div
+        className="rounded-lg p-6 sm:p-8"
+        style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
+      >
         {step === 1 && (
           <>
-            {/* Mode selector tabs */}
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => setMode('upload')}
-                className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all"
-                style={{
-                  background: mode === 'upload' ? 'var(--primary)' : 'var(--card)',
-                  color: mode === 'upload' ? 'var(--primary-text)' : 'var(--text-2)',
-                  border: mode === 'upload' ? '1px solid var(--primary)' : '1px solid var(--border)',
-                }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <polyline points="17,8 12,3 7,8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                Upload / Importar
-              </button>
-              <button
-                onClick={() => setMode('builder')}
-                className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all"
-                style={{
-                  background: mode === 'builder' ? 'var(--primary)' : 'var(--card)',
-                  color: mode === 'builder' ? 'var(--primary-text)' : 'var(--text-2)',
-                  border: mode === 'builder' ? '1px solid var(--primary)' : '1px solid var(--border)',
-                }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                Criar manualmente
-              </button>
+            {/* Mode selector — dir-b segmented pill */}
+            <div
+              className="mb-6 inline-flex overflow-hidden rounded-[5px]"
+              style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}
+            >
+              {([
+                { key: 'upload',  label: 'Upload / Importar' },
+                { key: 'builder', label: 'Criar manualmente' },
+              ] as const).map((opt, i) => {
+                const on = mode === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    onClick={() => setMode(opt.key)}
+                    className="px-3.5 py-1.5 text-[12px] transition-colors font-mono-ui uppercase tracking-[0.06em]"
+                    style={{
+                      background:   on ? 'var(--surface-3)' : 'transparent',
+                      color:        on ? 'var(--ink)' : 'var(--ink-3)',
+                      borderRight:  i === 0 ? '1px solid var(--line)' : 'none',
+                      fontWeight:   on ? 600 : 400,
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
 
             {mode === 'upload' && (

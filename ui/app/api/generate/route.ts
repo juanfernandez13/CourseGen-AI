@@ -6,7 +6,7 @@ import { generateMBZ } from '../../../server/mbzGenerator';
 import { extractAllQuizzes } from '../../../server/extractor';
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.GEMINI_KEY;
+  const apiKey = req.headers.get('x-gemini-key')?.trim() || process.env.GEMINI_KEY;
 
   const formData = await req.formData();
 

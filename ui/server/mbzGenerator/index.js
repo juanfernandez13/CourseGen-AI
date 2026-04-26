@@ -469,6 +469,18 @@ ${actSettings}
   write(`sections/section_${sec0Id}/section.xml`, buildSectionXml(sec0Id, 0, sec0Title, sec0Summary, [], 0, now));
   write(`sections/section_${sec0Id}/inforef.xml`, INFOREF_EMPTY);
 
+  // Fallback: se uma aula não tem data_inicio, calcula a partir da primeira
+  // aula com data preenchida na matriz, somando 7 dias por aula. Aplica-se
+  // SOMENTE à restrição de acesso da seção — atividades sempre usam o calendário.
+  const WEEK = 7 * 86400;
+  const rawSectionTs = aulas.map(a => dateToTs(a?.data_inicio));
+  let anchorIdx = rawSectionTs.findIndex(ts => ts > 0);
+  const sectionTs = rawSectionTs.map((ts, i) => {
+    if (ts > 0) return ts;
+    if (anchorIdx === -1) return 0;
+    return rawSectionTs[anchorIdx] + (i - anchorIdx) * WEEK;
+  });
+
   for (const [i, aula] of aulas.entries()) {
     const ids = aulaIds[i];
     const seq = [];
@@ -478,10 +490,9 @@ ${actSettings}
     if (aula.wiki)      { seq.push(ids.wikiId); seq.push(ids.wikiAssignId); }
     if (aula.glossario) seq.push(ids.glossaryId);
     if (!aula.chat && aula.tarefa) seq.push(ids.assignId);
-    const ts      = dateToTs(aula.data_inicio);
     const summary = aula.descricao ? `&lt;p&gt;${sanitize(aula.descricao)}&lt;/p&gt;` : '';
     write(`sections/section_${ids.sectionId}/section.xml`,
-      buildSectionXml(ids.sectionId, i + 1, sanitize(aula.titulo || `Aula ${i + 1}`), summary, seq, ts, now));
+      buildSectionXml(ids.sectionId, i + 1, sanitize(aula.titulo || `Aula ${i + 1}`), summary, seq, sectionTs[i], now));
     write(`sections/section_${ids.sectionId}/inforef.xml`, INFOREF_EMPTY);
   }
 
@@ -558,7 +569,7 @@ ${actSettings}
     if (aula.quiz) {
       const quizDir = `activities/quiz_${ids.quizId}`;
       write(`${quizDir}/quiz.xml`, buildQuizXml(ids.quizId, ids.quizCtx, aula, now));
-      writeActivityStubs(quizDir, ids.quizId, 'quiz', ids.sectionId, secNum, tsAula,
+      writeActivityStubs(quizDir, ids.quizId, 'quiz', ids.sectionId, secNum, 0,
         buildActivityGradesXml(ids.quizId, eadCatId, aula.quiz?.titulo || `Questionário ${i + 1}`, 'quiz', i * 3 + 11, now));
       if (aula.quiz.questoes?.length) {
         const gradeItemId = ids.quizId + 90000;

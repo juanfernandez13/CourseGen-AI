@@ -1,3 +1,15 @@
+import { authHeaders } from './apiKeys';
+
+export async function checkServerHealth(): Promise<{ serverFallbackAvailable: boolean }> {
+  try {
+    const res = await fetch('/api/health', { cache: 'no-store' });
+    if (!res.ok) return { serverFallbackAvailable: false };
+    return await res.json();
+  } catch {
+    return { serverFallbackAvailable: false };
+  }
+}
+
 export async function extractJson(matrizFile: File, quizFiles: File[] = []): Promise<object> {
   const formData = new FormData();
   formData.append('matriz', matrizFile);
@@ -5,6 +17,7 @@ export async function extractJson(matrizFile: File, quizFiles: File[] = []): Pro
 
   const res = await fetch(`/api/preview`, {
     method: 'POST',
+    headers: authHeaders(),
     body: formData,
   });
 
@@ -33,7 +46,7 @@ export async function extractQuizzes(quizFiles: File[]): Promise<{ questoes: unk
   const formData = new FormData();
   for (const f of quizFiles) formData.append('quizzes', f);
 
-  const res = await fetch('/api/quizzes', { method: 'POST', body: formData });
+  const res = await fetch('/api/quizzes', { method: 'POST', headers: authHeaders(), body: formData });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.error || `Erro ${res.status} ao extrair quizzes`);
@@ -60,6 +73,7 @@ export async function generateMbz(
 
   const res = await fetch(`/api/generate`, {
     method: 'POST',
+    headers: authHeaders(),
     body: formData,
   });
 

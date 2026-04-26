@@ -15,14 +15,16 @@
 
 # next.js
 /.next/
+.next/
 /out/
-
 # production
 /build
 
 # misc
 .DS_Store
 *.pem
+*.mbz
+*.zip
 
 # debug
 npm-debug.log*

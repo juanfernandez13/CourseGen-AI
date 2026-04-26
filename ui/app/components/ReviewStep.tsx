@@ -470,8 +470,14 @@ function VisualView({ data, tarefaMap }: { data: MatrizData; tarefaMap: Record<n
   return (
     <div className="flex flex-col gap-5">
       {/* Metadata */}
-      <div className="grid gap-3 rounded-xl p-4"
-        style={{ background: 'var(--card)', border: '1px solid var(--border)', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+      <div
+        className="grid gap-x-6 gap-y-3.5 rounded-md p-4"
+        style={{
+          background: 'var(--surface-2)',
+          border: '1px solid var(--line)',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+        }}
+      >
         {([
           ['Disciplina', data.disciplina?.nome],
           ['Código',     data.disciplina?.codigo],
@@ -482,27 +488,40 @@ function VisualView({ data, tarefaMap }: { data: MatrizData; tarefaMap: Record<n
           ['Professor',  data.professor?.nome],
           ['Tutor',      data.professor?.tutor],
         ] as [string, string | undefined][]).map(([label, value]) => (
-          <div key={label} className="flex flex-col gap-0.5">
-            <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-4)' }}>{label}</span>
-            <span className="text-sm font-medium truncate" style={{ color: value ? 'var(--text-1)' : 'var(--border)' }} title={value ?? ''}>
+          <div key={label} className="flex flex-col gap-1">
+            <span className="font-mono-ui text-[10px] uppercase tracking-[0.08em]" style={{ color: 'var(--ink-3)' }}>
+              {label}
+            </span>
+            <span
+              className="truncate text-[13px]"
+              style={{ color: value ? 'var(--text-1)' : 'var(--ink-3)' }}
+              title={value ?? ''}
+            >
               {value ?? '—'}
             </span>
           </div>
         ))}
       </div>
 
-      {/* Stats */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Stats — dir-b mono row */}
+      <div className="flex flex-wrap gap-1.5">
         {([
-          ['Aulas',   aulas.length,                        '--primary', '--primary-dim', '--border'],
-          ['Quizzes', aulas.filter(a => a.quiz).length,   '--quiz',    '--quiz-dim',    '--quiz-border'],
-          ['Tarefas', aulas.filter(a => a.tarefa).length, '--tarefa',  '--tarefa-dim',  '--tarefa-border'],
-          ['Fóruns',  aulas.filter(a => a.forum).length,  '--forum',   '--forum-dim',   '--forum-border'],
-        ] as [string, number, string, string, string][]).map(([label, value, color, dim, bdr]) => (
-          <div key={label} className="flex items-center gap-2 rounded-lg px-4 py-2.5"
-            style={{ background: `var(${dim})`, border: `1px solid var(${bdr})` }}>
-            <span className="text-2xl font-bold" style={{ color: `var(${color})` }}>{value}</span>
-            <span className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>{label}</span>
+          ['Aulas',   aulas.length,                        '--accent'],
+          ['Quizzes', aulas.filter(a => a.quiz).length,   '--quiz'],
+          ['Tarefas', aulas.filter(a => a.tarefa).length, '--tarefa'],
+          ['Fóruns',  aulas.filter(a => a.forum).length,  '--forum'],
+        ] as [string, number, string][]).map(([label, value, color]) => (
+          <div
+            key={label}
+            className="flex items-baseline gap-2 rounded-md px-3 py-2"
+            style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}
+          >
+            <span className="text-[18px] font-semibold tabular-nums" style={{ color: `var(${color})` }}>
+              {value}
+            </span>
+            <span className="font-mono-ui text-[10.5px] uppercase tracking-[0.06em]" style={{ color: 'var(--ink-3)' }}>
+              {label}
+            </span>
           </div>
         ))}
       </div>
@@ -584,49 +603,61 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
   return (
     <div className="flex flex-col gap-5">
       {/* Header + toggle */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold" style={{ color: 'var(--text-1)' }}>Revisar dados extraídos</h2>
-          <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>Clique em uma aula para ver detalhes e arquivos.</p>
+          <span className="font-mono-ui text-[10.5px] uppercase tracking-[0.06em]" style={{ color: 'var(--ink-3)' }}>
+            step 02 / revisão
+          </span>
+          <h2
+            className="mt-1.5 text-[22px] font-semibold tracking-tight"
+            style={{ color: 'var(--text-1)', letterSpacing: '-0.4px' }}
+          >
+            Revisar dados extraídos
+          </h2>
+          <p className="mt-1 text-[13px]" style={{ color: 'var(--text-2)' }}>
+            Clique em uma aula para ver detalhes e arquivos.
+          </p>
         </div>
 
-        <div className="flex gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           {hasHistory && (
             <button
               onClick={() => setShowHistory(v => !v)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all"
+              className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11.5px] transition-colors"
               style={{
-                background: showHistory ? 'var(--primary-dim)' : 'var(--card)',
-                color: showHistory ? 'var(--primary)' : 'var(--text-3)',
-                border: showHistory ? '1px solid var(--primary-ring)' : '1px solid var(--border)',
+                background: showHistory ? 'var(--accent-soft)' : 'transparent',
+                color:      showHistory ? 'var(--accent-ink)' : 'var(--ink-2)',
+                border:     showHistory ? '1px solid var(--primary-ring)' : '1px solid var(--line-2)',
               }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 <polyline points="3,4 3,8 7,8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M12 7v5l4 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Versões ({history!.versions.length})
+              versões · {history!.versions.length}
             </button>
           )}
-          <div className="flex rounded-lg overflow-hidden"
-            style={{ border: '1px solid var(--border)', background: 'var(--card)' }}>
-            {(['visual', 'json'] as const).map(v => (
-              <button key={v} onClick={() => setView(v)}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-all"
-                style={{ background: view === v ? 'var(--primary)' : 'transparent', color: view === v ? 'var(--primary-text)' : 'var(--text-3)' }}>
-                {v === 'visual' ? (
-                  <><svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="3"   width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
-                    <rect x="14" y="3"  width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
-                    <rect x="3" y="14"  width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
-                    <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
-                  </svg>Visual</>
-                ) : (
-                  <><svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    <path d="M12 8v8M9 11l3-3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>JSON</>
-                )}
+          <div
+            className="flex overflow-hidden rounded-md"
+            style={{ border: '1px solid var(--line-2)', background: 'var(--surface-2)' }}
+          >
+            {([
+              { v: 'visual', label: 'Blocos' },
+              { v: 'json',   label: '{ } JSON' },
+            ] as const).map((opt, i) => (
+              <button
+                key={opt.v}
+                onClick={() => setView(opt.v)}
+                className="px-3 py-1.5 text-[11.5px] transition-colors"
+                style={{
+                  background:  view === opt.v ? 'var(--surface-3)' : 'transparent',
+                  color:       view === opt.v ? 'var(--ink)' : 'var(--ink-3)',
+                  fontWeight:  view === opt.v ? 600 : 400,
+                  borderRight: i === 0 ? '1px solid var(--line-2)' : 'none',
+                  fontFamily:  'var(--font-mono)',
+                  letterSpacing: 0.3,
+                }}>
+                {opt.label}
               </button>
             ))}
           </div>
@@ -703,21 +734,37 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
       )}
 
       {/* Bottom bar */}
-      <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-        <button onClick={onBack} disabled={loading}
-          className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium"
-          style={{ background: 'transparent', color: loading ? 'var(--text-4)' : 'var(--text-2)', border: '1px solid var(--border)', cursor: loading ? 'not-allowed' : 'pointer' }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <div
+        className="-mx-6 -mb-6 mt-2 flex flex-wrap items-center justify-between gap-3 px-6 py-4 sm:-mx-8 sm:-mb-8 sm:px-8"
+        style={{ borderTop: '1px solid var(--line)', background: 'var(--surface-2)' }}
+      >
+        <button
+          onClick={onBack}
+          disabled={loading}
+          className="flex items-center gap-2 rounded-md px-3 py-1.5 text-[12px] transition-colors"
+          style={{
+            background: 'transparent',
+            color: loading ? 'var(--ink-3)' : 'var(--ink-2)',
+            border: '1px solid var(--line-2)',
+            cursor: loading ? 'not-allowed' : 'pointer',
+          }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
             <path d="M19 12H5M11 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
           Voltar
         </button>
-        <button onClick={onGenerate} disabled={!canGenerate}
-          className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold"
-          style={{ background: !canGenerate ? 'var(--card)' : 'var(--primary)', color: !canGenerate ? 'var(--text-4)' : 'var(--primary-text)', cursor: !canGenerate ? 'not-allowed' : 'pointer' }}>
+        <button
+          onClick={onGenerate}
+          disabled={!canGenerate}
+          className="flex items-center gap-2 rounded-md px-4 py-1.5 text-[12.5px] font-medium transition-colors"
+          style={{
+            background: !canGenerate ? 'var(--surface-3)' : 'var(--ink)',
+            color:      !canGenerate ? 'var(--ink-3)' : 'var(--bg)',
+            cursor:     !canGenerate ? 'not-allowed' : 'pointer',
+          }}>
           {loading
-            ? <><Spinner />Gerando...</>
-            : <>Gerar MBZ <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg></>}
+            ? <><Spinner />gerando…</>
+            : <>Gerar .mbz <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg></>}
         </button>
       </div>
     </div>

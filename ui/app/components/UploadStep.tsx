@@ -47,29 +47,35 @@ const EXT_COLORS: Record<string, string> = {
 
 function FileChip({ name, badge, onRemove, onView }: { name: string; badge?: string; onRemove: () => void; onView?: () => void }) {
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
-  const color = EXT_COLORS[ext] ?? 'var(--primary)';
+  const color = EXT_COLORS[ext] ?? 'var(--accent)';
 
   return (
     <div
-      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
-      style={{ background: 'var(--bg)', border: '1px solid var(--border-subtle)' }}
+      className="flex items-center gap-2.5 rounded-[3px] px-2.5 py-1.5 font-mono-ui text-[11px]"
+      style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
     >
+      {/* DOC tag */}
+      <div
+        className="grid h-6.5 w-5.5 place-items-center rounded-xs text-[8px] font-bold"
+        style={{
+          background: 'var(--accent-soft)',
+          border: '1px solid var(--primary-ring)',
+          color: color,
+        }}
+      >
+        {ext.slice(0, 3).toUpperCase() || 'DOC'}
+      </div>
       {badge && (
         <span
-          className="text-xs font-bold rounded px-1.5 py-0.5 shrink-0"
-          style={{ background: 'var(--primary-dim)', color: 'var(--primary)' }}
+          className="shrink-0 rounded-[3px] px-1.5 py-0.5 text-[10px] font-semibold"
+          style={{ background: 'var(--accent-soft)', color: 'var(--accent-ink)' }}
         >
           {badge}
         </span>
       )}
-      {/* Extension icon */}
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-        <polyline points="14,2 14,8 20,8" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
       <span
-        className="flex-1 truncate text-xs font-medium"
-        style={{ color: 'var(--text-2)', maxWidth: '200px' }}
+        className="flex-1 min-w-0 truncate"
+        style={{ color: 'var(--ink)' }}
         title={name}
       >
         {name}
@@ -77,24 +83,20 @@ function FileChip({ name, badge, onRemove, onView }: { name: string; badge?: str
       {onView && (
         <button
           onClick={e => { e.stopPropagation(); onView(); }}
-          className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium transition-all"
-          style={{ background: 'var(--primary-dim)', color: 'var(--primary)', border: '1px solid var(--primary-ring)' }}
+          className="rounded-[3px] px-1.5 py-0.5 text-[10px] transition-colors hover:bg-(--surface-3)"
+          style={{ color: 'var(--ink-3)', border: '1px solid var(--line)' }}
+          title="Visualizar"
         >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2" />
-            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
-          </svg>
-          Ver
+          ver ↗
         </button>
       )}
       <button
         onClick={e => { e.stopPropagation(); onRemove(); }}
-        className="flex items-center justify-center rounded p-0.5 transition-colors hover:bg-red-500/10"
+        className="flex h-5 w-5 items-center justify-center rounded transition-colors hover:bg-(--surface-3)"
+        style={{ color: 'var(--ink-3)' }}
         title="Remover"
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-          <path d="M18 6L6 18M6 6l12 12" stroke="var(--text-3)" strokeWidth="2" strokeLinecap="round" />
-        </svg>
+        ×
       </button>
     </div>
   );
@@ -128,21 +130,24 @@ function DropZone({
       onDragOver={e => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
-      className="flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 gap-2"
+      className="flex cursor-pointer items-center justify-center gap-2 rounded-[5px] transition-colors"
       style={{
-        background: dragging ? 'var(--primary-dim)' : 'var(--bg)',
-        border:     dragging ? '2px dashed var(--primary)' : '2px dashed var(--border)',
-        padding:    compact ? '12px 16px' : '24px 16px',
+        background: dragging ? 'var(--accent-soft)' : 'var(--surface)',
+        border:     dragging ? '1px dashed var(--accent)' : '1px dashed var(--line-2)',
+        padding:    compact ? '10px 14px' : '20px 14px',
       }}
     >
       <input ref={inputRef} type="file" accept={accept} multiple={multiple} className="hidden" onChange={handleChange} />
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round" />
-        <polyline points="17,8 12,3 7,8"                      stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="12" y1="3" x2="12" y2="15"                 stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round" />
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke={dragging ? 'var(--accent)' : 'var(--ink-3)'} strokeWidth="1.5" strokeLinecap="round" />
+        <polyline points="17,8 12,3 7,8"                    stroke={dragging ? 'var(--accent)' : 'var(--ink-3)'} strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="12" y1="3" x2="12" y2="15"                stroke={dragging ? 'var(--accent)' : 'var(--ink-3)'} strokeWidth="1.5" strokeLinecap="round" />
       </svg>
-      <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-        {dragging ? 'Solte aqui' : 'Arraste ou clique'}
+      <span
+        className="font-mono-ui text-[10.5px] uppercase tracking-[0.06em]"
+        style={{ color: dragging ? 'var(--accent)' : 'var(--ink-3)' }}
+      >
+        {dragging ? 'solte para anexar' : 'arraste ou clique'}
       </span>
     </div>
   );
@@ -161,22 +166,32 @@ function UploadCard({
 }) {
   return (
     <div
-      className="flex flex-col gap-3 rounded-xl p-4"
-      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+      className="relative flex flex-col gap-3 rounded-md p-4"
+      style={{
+        background: 'var(--surface-2)',
+        border: required ? '1px solid var(--accent)' : '1px solid var(--line)',
+      }}
     >
+      {required && (
+        <span
+          className="absolute -top-2 left-3 px-1.5 font-mono-ui text-[9.5px] uppercase tracking-[0.08em]"
+          style={{ background: 'var(--surface)', color: 'var(--accent)' }}
+        >
+          obrigatório
+        </span>
+      )}
       <div className="flex items-start gap-3">
         <div
-          className="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
-          style={{ background: accentColor ? `${accentColor}14` : 'var(--primary-dim)' }}
+          className="flex h-8 w-8 items-center justify-center rounded-[5px] shrink-0"
+          style={{ background: accentColor ? `${accentColor}1f` : 'var(--accent-soft)' }}
         >
           {icon}
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{title}</span>
-            {required && <span className="text-xs" style={{ color: 'var(--error)' }}>*</span>}
+            <span className="text-[13px] font-medium" style={{ color: 'var(--text-1)' }}>{title}</span>
           </div>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{subtitle}</p>
+          <p className="mt-0.5 text-[11.5px]" style={{ color: 'var(--text-3)' }}>{subtitle}</p>
         </div>
       </div>
       {children}
@@ -246,9 +261,17 @@ export default function UploadStep({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-xl font-semibold" style={{ color: 'var(--text-1)' }}>Enviar arquivos</h2>
-        <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>
-          Faça o upload da matriz obrigatória e, opcionalmente, os quizzes e tarefas.
+        <span className="font-mono-ui text-[10.5px] uppercase tracking-[0.06em]" style={{ color: 'var(--ink-3)' }}>
+          step 01 / upload
+        </span>
+        <h2
+          className="mt-1.5 text-[22px] font-semibold tracking-tight"
+          style={{ color: 'var(--text-1)', letterSpacing: '-0.4px' }}
+        >
+          Anexar documentos
+        </h2>
+        <p className="mt-1 text-[13px]" style={{ color: 'var(--text-2)' }}>
+          Matriz é obrigatória. Quizzes e tarefas, opcionais. Tamanho máximo 20 MB por arquivo.
         </p>
       </div>
 
@@ -499,42 +522,37 @@ export default function UploadStep({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        {/* Toggle JSON manual panel */}
+      <div
+        className="-mx-6 -mb-6 mt-2 flex flex-wrap items-center justify-between gap-3 px-6 py-4 sm:-mx-8 sm:-mb-8 sm:px-8"
+        style={{ borderTop: '1px solid var(--line)', background: 'var(--surface-2)' }}
+      >
         <button
           onClick={() => { setShowJsonPanel(v => !v); setError(null); }}
-          className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all"
+          className="flex items-center gap-2 rounded-md px-3 py-1.5 text-[12px] transition-colors"
           style={{
-            background: showJsonPanel ? 'var(--primary-dim)' : 'var(--card)',
-            color:      showJsonPanel ? 'var(--primary)' : 'var(--text-2)',
-            border:     showJsonPanel ? '1px solid var(--primary-ring)' : '1px solid var(--border)',
+            background: showJsonPanel ? 'var(--accent-soft)' : 'transparent',
+            color:      showJsonPanel ? 'var(--accent-ink)' : 'var(--ink-2)',
+            border:     showJsonPanel ? '1px solid var(--primary-ring)' : '1px solid var(--line-2)',
           }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="9" y1="13" x2="15" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="9" y1="17" x2="12" y2="17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          {showJsonPanel ? 'Ocultar JSON manual' : 'Usar JSON existente'}
+          {showJsonPanel ? 'ocultar JSON manual' : '{ } usar JSON existente'}
         </button>
 
-        {/* Gemini extract button */}
         <button
           onClick={handleExtract}
           disabled={!canExtract}
-          className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200"
+          className="flex items-center gap-2 rounded-md px-4 py-1.5 text-[12.5px] font-medium transition-colors"
           style={{
-            background: canExtract ? 'var(--primary)' : 'var(--card)',
-            color:      canExtract ? 'var(--primary-text)' : 'var(--text-4)',
-            cursor:     canExtract ? 'pointer' : 'not-allowed',
+            background: canExtract ? 'var(--ink)' : 'var(--surface-3)',
+            color:      canExtract ? 'var(--bg)'  : 'var(--ink-3)',
+            cursor:     canExtract ? 'pointer'    : 'not-allowed',
             border:     '1px solid transparent',
           }}>
           {loading ? (
-            <><Spinner />Extraindo com Gemini...</>
+            <><Spinner />extraindo…</>
           ) : (
             <>
               Extrair com Gemini
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                 <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </>
