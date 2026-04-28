@@ -71,7 +71,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="mx-auto max-w-6xl flex flex-col px-6 py-8">
       <StepIndicator currentStep={step} onNavigate={handleNavigate} />
 
       <div

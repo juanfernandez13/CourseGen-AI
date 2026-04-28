@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider, ThemeToggle } from './components/ThemeProvider';
 import SettingsButton from './components/SettingsButton';
+import VersionToggle from './components/VersionToggle';
 
 export const metadata: Metadata = {
   title: 'CourseGen AI',
@@ -43,12 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="text-[13px] font-semibold tracking-tight" style={{ color: 'var(--header-text)' }}>
                 CourseGen
               </span>
-              <span
-                className="font-mono-ui text-[10.5px] px-1.5 py-px rounded-[3px]"
-                style={{ color: 'var(--ink-3)', border: '1px solid var(--line)' }}
-              >
-                v0.4
-              </span>
+              <VersionToggle />
             </div>
 
             {/* Nav links (purely visual; single page app) */}
@@ -100,9 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </header>
 
-          <main className="mx-auto max-w-6xl px-6 py-8">
-            {children}
-          </main>
+          <main>{children}</main>
         </ThemeProvider>
       </body>
     </html>
