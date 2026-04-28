@@ -4,7 +4,6 @@
 /uploads
 *.doc
 *.docx
-*.zip
 *.mbz
 *.pdf
 yarn.lock

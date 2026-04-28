@@ -140,7 +140,13 @@ Regras:
 - "encontros": extraia a seção "DESCRIÇÃO DO(S) ENCONTRO(S) PRESENCIAL(IS) OU VIRTUAL(IS)" (geralmente seção 9). Cada encontro vira um item com: numero, titulo (completo com data), descricao (atividades), data (DD/MM/YYYY do encontro), turnos (1 ou 2, quantidade de turnos), avaliacao ("sem_nota" ou "nota_media"), peso (0 a 100, percentual), nota_titulo (campo "Nota -" da configuração), falta_titulo (campo "Falta -" da configuração). Use [] se não houver seção de encontros.
 - "avaliacao_final": extraia a avaliação final (AF). O título deve ser literalmente "[Disciplina] [Avaliação Final]". Sempre retorne este campo.
 - "frequencia": extraia o percentual mínimo de frequência exigido (geralmente 75% no IFCE).
-- Datas: extraia do cronograma/calendário. Use null se não encontrar.
+- Datas das aulas (data_inicio/data_fim): procure em QUALQUER lugar textual do documento — não apenas no cronograma/calendário, que pode estar como imagem e não aparecer no texto extraído. As datas costumam aparecer em pelo menos um destes locais:
+  • no título ou subtítulo da aula (ex: "Aula 1 — 10/04 a 19/04/2026")
+  • no início ou fim da descrição/apresentação da aula
+  • em tabelas, listas ou parágrafos referenciando a aula pelo número
+  • junto à descrição de fórum, quiz, tarefa, chat, wiki ou glossário daquela aula
+  Aceite intervalos escritos em qualquer formato (ex: "10/04 a 19/04/2026", "de 10/04/2026 até 19/04/2026", "10 de abril a 19 de abril de 2026", "10 a 19 de abril/2026") e normalize SEMPRE para "DD/MM/YYYY". Se o ano não estiver explícito no intervalo, herde do contexto da disciplina (semestre/cronograma). Só retorne null se realmente nenhuma data textual existir para aquela aula.
+- Datas de atividades (forum/quiz/tarefa/chat/wiki/glossario): se a atividade não tiver datas próprias, herde data_inicio/data_fim da aula a que pertence.
 - "livro_de_notas": extraia os pesos das categorias do sistema de avaliação. Use 40/60 como padrão IFCE se não especificado.
 - Notas: extraia os pontos de cada atividade. Use 10 como padrão.
 - IMPORTANTE: nos valores string do JSON, nunca use aspas duplas. Se precisar enfatizar uma palavra, use asteriscos (*palavra*) ou escreva sem marcação. Aspas duplas dentro de strings quebram o JSON.
@@ -157,7 +163,7 @@ Schema de retorno:
     {
       "questoes": [
         { "tipo": "multipla_escolha", "numero": 1, "enunciado": "texto da questão", "pontuacao": 2.0,
-          "itens": [{"texto":"alternativa A","isCorrect":false},{"texto":"alternativa B","isCorrect":true}] },
+          "itens": [{"texto":"alternativa A","isCorrect":false,"feedback":"comentário do arquivo para esta alternativa, se houver"},{"texto":"alternativa B","isCorrect":true,"feedback":"comentário do arquivo para esta alternativa, se houver"}] },
         { "tipo": "associativa", "numero": 2, "enunciado": "texto da questão", "pontuacao": 1.0,
           "itens": [{"texto":"afirmação 1","resposta":"V"},{"texto":"afirmação 2","resposta":"F"}] },
         { "tipo": "dissertativa", "numero": 3, "enunciado": "texto da questão", "pontuacao": 3.0, "feedback": "gabarito opcional" }
@@ -168,7 +174,7 @@ Schema de retorno:
 
 Regras:
 - Retorne um item em "quizzes" para CADA documento marcado com === QUIZ N ===, na mesma ordem.
-- "multipla_escolha": itens com "texto" e "isCorrect" (boolean). Apenas 1 correto.
+- "multipla_escolha": itens com "texto" e "isCorrect" (boolean). Apenas 1 correto. Se o documento trouxer um comentário/feedback específico para a alternativa (ex: "Feedback específico", explicação do erro/acerto após a opção), transcreva-o LITERALMENTE no campo "feedback" do item. Se não houver feedback no arquivo para aquela alternativa, omita o campo "feedback" (não invente texto).
 - "associativa": itens com "texto" e "resposta" ("V" ou "F").
 - "dissertativa": sem itens, pode ter "feedback".
 - Preserve fórmulas matemáticas com Unicode (ex: x², √2, aₙ).

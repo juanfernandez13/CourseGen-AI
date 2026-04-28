@@ -160,7 +160,7 @@ function buildQuizXml(id, ctx, aula, now) {
     <introformat>1</introformat>
     <timeopen>${timeopen}</timeopen>
     <timeclose>${timeclose}</timeclose>
-    <timelimit>3600</timelimit>
+    <timelimit>7200</timelimit>
     <overduehandling>autosubmit</overduehandling>
     <graceperiod>0</graceperiod>
     <preferredbehaviour>deferredfeedback</preferredbehaviour>
@@ -258,7 +258,9 @@ function buildQuestionsXml(aulas, aulaIds, now) {
         itens.forEach((item, ai) => {
           const answerId = quizId + 8000000 + qi * 100 + ai;
           const fraction = item.isCorrect ? (1 / nCorrect).toFixed(7) : '0.0000000';
-          const fbText   = item.isCorrect ? 'Opção correta. Parabéns!' : 'Opção incorreta.';
+          const fbText   = item.feedback
+            ? sanitize(item.feedback)
+            : (item.isCorrect ? 'Opção correta. Parabéns!' : 'Opção incorreta.');
           answersXml += `
                     <answer id="${answerId}">
                       <answertext>&lt;p&gt;${sanitize(item.texto || '')}&lt;/p&gt;</answertext>

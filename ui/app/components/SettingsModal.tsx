@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getGeminiKey, setGeminiKey, clearGeminiKey, maskKey } from '../lib/apiKeys';
 import { checkServerHealth } from '../lib/api';
 
@@ -17,7 +18,13 @@ export default function SettingsModal({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
     const id = requestAnimationFrame(() => setVisible(true));
-    return () => cancelAnimationFrame(id);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener('keydown', onKey);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -31,6 +38,7 @@ export default function SettingsModal({ open, onClose }: Props) {
   }, [open]);
 
   if (!open) return null;
+  if (typeof document === 'undefined') return null;
 
   function close() {
     setVisible(false);
@@ -54,7 +62,7 @@ export default function SettingsModal({ open, onClose }: Props) {
     setDraft('');
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 grid place-items-center p-4"
       style={{
@@ -241,7 +249,8 @@ export default function SettingsModal({ open, onClose }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

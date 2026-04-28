@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "cd ui && yarn dev",
     "build": "cd ui && yarn build",
-    "start": "cd ui && yarn start"
+    "start": "cd ui && yarn start",
+    "test": "cd ui && yarn test"
   },
   "keywords": [],
   "author": "",

@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --test server/"
   },
   "dependencies": {
     "@google/genai": "^1.45.0",
