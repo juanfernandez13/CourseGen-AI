@@ -24,18 +24,25 @@ function textToMoodleHtml(text) {
     .join('');
 }
 
-// Normaliza o último colchete de peso: "[Peso 50%]" → "[50]"
+// Formata nota para exibição em título: inteiro fica sem vírgula, decimal usa vírgula (6.5 → "6,5", 10 → "10")
+function formatNotaBR(n) {
+  const num = typeof n === 'string' ? parseFloat(n.replace(',', '.')) : Number(n);
+  if (!Number.isFinite(num)) return String(n);
+  return Number.isInteger(num) ? String(num) : String(num).replace('.', ',');
+}
+
+// Normaliza o último colchete de peso: "[Peso 50%]" → "[50]", "[Tema X 6,5]" → "[6,5]"
 function normalizeTitleBrackets(titulo) {
   return String(titulo || '').replace(
-    /\[[^\[\]]*?(\d+(?:\.\d+)?)[^\[\]]*\]([^\[]*)$/,
-    (_, n, tail) => `[${parseFloat(n)}]${tail}`
+    /\[[^\[\]]*?(\d+(?:[.,]\d+)?)[^\[\]]*\]([^\[]*)$/,
+    (_, n, tail) => `[${formatNotaBR(n)}]${tail}`
   );
 }
 
-// Extrai o peso numérico do último par de colchetes: "[Aula 1] [10]" → 10
+// Extrai o peso numérico do último par de colchetes: "[Aula 1] [10]" → 10, "[6,5]" → 6.5
 function extractBracketWeight(titulo) {
-  const m = String(titulo || '').match(/\[(\d+(?:\.\d+)?)\][^\[]*$/);
-  return m ? parseFloat(m[1]) : 0;
+  const m = String(titulo || '').match(/\[(\d+(?:[.,]\d+)?)\][^\[]*$/);
+  return m ? parseFloat(m[1].replace(',', '.')) : 0;
 }
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -169,6 +176,7 @@ module.exports = {
   textToMoodleHtml,
   normalizeTitleBrackets,
   extractBracketWeight,
+  formatNotaBR,
   dateToTs,
   getMimeType,
   EMPTY_SHA1,

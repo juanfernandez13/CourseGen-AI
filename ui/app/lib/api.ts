@@ -1,4 +1,9 @@
-import { authHeaders } from './apiKeys';
+import { authHeaders, getGeminiKey } from './apiKeys';
+import {
+  extractMatrizFromFile,
+  extractAllQuizzes as extractAllQuizzesClient,
+  type QuizExtraction,
+} from './extractor.client';
 
 export async function checkServerHealth(): Promise<{ serverFallbackAvailable: boolean }> {
   try {
@@ -10,62 +15,53 @@ export async function checkServerHealth(): Promise<{ serverFallbackAvailable: bo
   }
 }
 
-export async function extractJson(matrizFile: File, quizFiles: File[] = []): Promise<object> {
-  const formData = new FormData();
-  formData.append('matriz', matrizFile);
-  for (const f of quizFiles) formData.append('quizzes', f);
-
-  const res = await fetch(`/api/preview`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: formData,
-  });
-
-  if (!res.ok) {
-    let message = `Erro ${res.status}: ${res.statusText}`;
-    try {
-      const body = await res.json();
-      if (body?.error) message = body.error;
-      else if (body?.message) message = body.message;
-    } catch {
-      // ignore parse error
-    }
-    throw new Error(message);
+function requireApiKey(): string {
+  const key = getGeminiKey();
+  if (!key) {
+    throw new Error('Configure sua chave do Gemini em ⚙ Configurações antes de continuar.');
   }
-
-  const body = await res.json();
-
-  if (!body.success) {
-    throw new Error(body.error || 'Falha ao extrair dados da matriz.');
-  }
-
-  return body.data as object;
+  return key;
 }
 
-export async function extractQuizzes(quizFiles: File[]): Promise<{ questoes: unknown[] }[]> {
-  const formData = new FormData();
-  for (const f of quizFiles) formData.append('quizzes', f);
+export async function extractJson(matrizFile: File, quizFiles: File[] = []): Promise<object> {
+  const apiKey = requireApiKey();
 
-  const res = await fetch('/api/quizzes', { method: 'POST', headers: authHeaders(), body: formData });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.error || `Erro ${res.status} ao extrair quizzes`);
+  const matrizData = await extractMatrizFromFile(matrizFile, apiKey) as {
+    aulas?: Array<{ quiz?: { questoes?: unknown[] } & Record<string, unknown> }>;
+    [k: string]: unknown;
+  };
+
+  if (quizFiles.length > 0) {
+    try {
+      const allQuizzes = await extractAllQuizzesClient(quizFiles, apiKey);
+      let quizIdx = 0;
+      for (const aula of matrizData.aulas || []) {
+        if (aula.quiz && quizIdx < allQuizzes.length) {
+          aula.quiz.questoes = allQuizzes[quizIdx].questoes || [];
+          quizIdx++;
+        }
+      }
+    } catch (e: unknown) {
+      console.warn(`Erro ao processar quizzes: ${e instanceof Error ? e.message : e}`);
+    }
   }
-  const body = await res.json();
-  return body.quizzes || [];
+
+  return matrizData;
+}
+
+export async function extractQuizzes(quizFiles: File[]): Promise<QuizExtraction[]> {
+  if (quizFiles.length === 0) return [];
+  const apiKey = requireApiKey();
+  return extractAllQuizzesClient(quizFiles, apiKey);
 }
 
 export async function generateMbz(
   matrizJson: string,
-  quizFiles: File[],
+  _quizFiles: File[],
   tarefaFiles: File[]
 ): Promise<void> {
   const formData = new FormData();
   formData.append('matrizJson', matrizJson);
-
-  for (const file of quizFiles) {
-    formData.append('quizzes', file);
-  }
 
   for (const file of tarefaFiles) {
     formData.append('tarefas', file);
@@ -95,7 +91,6 @@ export async function generateMbz(
   const a = document.createElement('a');
   a.href = url;
 
-  // Try to get filename from Content-Disposition header
   const disposition = res.headers.get('content-disposition');
   let filename = 'curso.mbz';
   if (disposition) {

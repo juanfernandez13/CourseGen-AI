@@ -7,7 +7,7 @@ const path = require('path');
 const os   = require('os');
 
 const {
-  sanitize, dateToTs, textToMoodleHtml, normalizeTitleBrackets,
+  sanitize, dateToTs, textToMoodleHtml, normalizeTitleBrackets, formatNotaBR,
   embedAssignFiles, buildFilesXml,
 } = require('./utils');
 
@@ -207,7 +207,7 @@ async function generateMBZ(matrizData) {
         // Assign oculto para lançar nota do chat
         acts.push({
           moduleid: ids.assignId, sectionid: ids.sectionId, modulename: 'assign',
-          title: sanitize(normalizeTitleBrackets(aula.chat.nota_titulo || `[Aula ${i + 1}] [Chat ${i + 1}] ${aula.chat.titulo || ''} [${aula.chat.nota || 10}]`)),
+          title: sanitize(normalizeTitleBrackets(aula.chat.nota_titulo || `[Aula ${i + 1}] [Chat ${i + 1}] ${aula.chat.titulo || ''} [${formatNotaBR(aula.chat.nota || 10)}]`)),
           dir: `activities/assign_${ids.assignId}`,
         });
       }
@@ -220,7 +220,7 @@ async function generateMBZ(matrizData) {
         // Assign oculto para lançar nota da wiki
         acts.push({
           moduleid: ids.wikiAssignId, sectionid: ids.sectionId, modulename: 'assign',
-          title: sanitize(normalizeTitleBrackets(aula.wiki.nota_titulo || `[Aula ${i + 1}] [Wiki ${i + 1}] ${aula.wiki.titulo || ''} [${aula.wiki.nota || 10}]`)),
+          title: sanitize(normalizeTitleBrackets(aula.wiki.nota_titulo || `[Aula ${i + 1}] [Wiki ${i + 1}] ${aula.wiki.titulo || ''} [${formatNotaBR(aula.wiki.nota || 10)}]`)),
           dir: `activities/assign_${ids.wikiAssignId}`,
         });
       }
@@ -605,7 +605,7 @@ ${actSettings}
       // Assign oculto para lançar a nota do chat
       const chatAssignDir = `activities/assign_${ids.assignId}`;
       const chatNotaTitulo = sanitize(normalizeTitleBrackets(
-        aula.chat.nota_titulo || `[Aula ${i + 1}] [Chat ${i + 1}] ${aula.chat.titulo || ''} [${aula.chat.nota || 10}]`
+        aula.chat.nota_titulo || `[Aula ${i + 1}] [Chat ${i + 1}] ${aula.chat.titulo || ''} [${formatNotaBR(aula.chat.nota || 10)}]`
       ));
       write(`${chatAssignDir}/assign.xml`, buildAssignXml(ids.assignId, ids.assignCtx,
         { tarefa: { titulo: chatNotaTitulo, descricao: 'Atividade para receber a nota do chat' } }, now, [], true));
@@ -626,7 +626,7 @@ ${actSettings}
       // Assign oculto para lançar a nota da wiki
       const wikiAssignDir = `activities/assign_${ids.wikiAssignId}`;
       const wikiNotaTitulo = sanitize(normalizeTitleBrackets(
-        aula.wiki.nota_titulo || `[Aula ${i + 1}] [Wiki ${i + 1}] ${aula.wiki.titulo || ''} [${aula.wiki.nota || 10}]`
+        aula.wiki.nota_titulo || `[Aula ${i + 1}] [Wiki ${i + 1}] ${aula.wiki.titulo || ''} [${formatNotaBR(aula.wiki.nota || 10)}]`
       ));
       write(`${wikiAssignDir}/assign.xml`, buildAssignXml(ids.wikiAssignId, ids.wikiAssignCtx,
         { tarefa: { titulo: wikiNotaTitulo, descricao: '' } }, now, [], true));
