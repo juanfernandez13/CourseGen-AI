@@ -50,7 +50,7 @@ Suba a Matriz DE       Revise e edite o        Baixe o .mbz e
 |---|---|
 | Frontend | Next.js 16, React 19, TypeScript |
 | Estilização | Tailwind CSS v4 |
-| IA | Google Gemini 2.5 Flash (`@google/genai`) |
+| IA | Google Gemini (`@google/genai`, chamada no backend) |
 | Leitura de DOCX | mammoth.js |
 | Geração de MBZ | archiver.js + XML programático |
 | Utilitários | uuid, jsonrepair, pdfjs-dist |
@@ -93,8 +93,7 @@ Acesse em [http://localhost:3000](http://localhost:3000).
 ├── ui/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── preview/       # Extração da Matriz via Gemini
-│   │   │   ├── quizzes/       # Extração de questões via Gemini
+│   │   │   ├── extract/       # Extração da Matriz e quizzes via Gemini
 │   │   │   └── generate/      # Geração do arquivo .mbz
 │   │   ├── components/
 │   │   │   ├── UploadStep     # Passo 1 — upload de arquivos
@@ -108,7 +107,9 @@ Acesse em [http://localhost:3000](http://localhost:3000).
 │       ├── extractor.js       # Lógica de chamada ao Gemini
 │       ├── parser.js          # Leitura de DOCX com mammoth
 │       └── mbzGenerator/
-│           ├── index.js       # Orquestração do pipeline MBZ
+│           ├── index.js       # Ciclo de vida do pipeline MBZ
+│           ├── model.js       # Normalização e IDs do Moodle
+│           ├── activityWriter.js # Escrita das atividades
 │           ├── builders.js    # Construtores de XML Moodle
 │           └── utils.js       # Helpers de XML, SHA1 e datas
 └── package.json

@@ -1,5 +1,5 @@
 /* User-provided AI provider keys, persisted in localStorage.
- * Keys are sent to /api/* via the X-Gemini-Key header — never to third parties. */
+ * Keys are sent only to our backend via X-Gemini-Key. */
 
 const KEY = {
   gemini: 'coursegen.key.gemini',

@@ -61,14 +61,16 @@ yarn start     # serve na porta 3000
 │   │   ├── lib/
 │   │   │   └── api.ts               # Funções fetch para as API Routes
 │   │   └── api/                      # Backend (Next.js API Routes)
-│   │       ├── preview/route.ts      # POST: matriz.docx → JSON via Gemini
+│   │       ├── extract/route.ts      # POST: DOCX → JSON via Gemini no backend
 │   │       ├── generate/route.ts     # POST: JSON + arquivos → .mbz
-│   │       └── quizzes/route.ts      # POST: quiz.docx → questões extraídas
+│   │       └── health/route.ts       # GET: disponibilidade da chave do servidor
 │   ├── server/                       # Lógica core (usada pelas API Routes)
 │   │   ├── parser.js                 # Extrai texto de DOCX (mammoth)
 │   │   ├── extractor.js              # Chamadas ao Gemini para extração
 │   │   └── mbzGenerator/
-│   │       ├── index.js              # Orquestrador da geração .mbz
+│   │       ├── index.js              # Ciclo de vida e estrutura do backup
+│   │       ├── model.js              # Normalização, descritores e alocação de IDs
+│   │       ├── activityWriter.js     # Escrita de atividades e avaliações
 │   │       ├── builders.js           # Builders de XML Moodle
 │   │       └── utils.js              # Utilitários (IDs, SHA1, etc.)
 │   ├── next.config.ts
@@ -82,17 +84,17 @@ Todas as rotas são `POST` e recebem `multipart/form-data`:
 
 | Rota | Campos | Retorno |
 |------|--------|---------|
-| `/api/preview` | `matriz` (docx), `quizzes[]` (docx) | `{ success, data }` — JSON estruturado |
-| `/api/generate` | `matrizJson` (string), `quizzes[]` (docx), `tarefas[]` (qualquer) | Arquivo `.mbz` para download |
-| `/api/quizzes` | `quizzes[]` (docx) | `{ quizzes }` — questões extraídas |
+| `/api/extract` | `matriz` (docx), `quizzes` (docx) | `{ data }` — JSON estruturado |
+| `/api/generate` | `matrizJson` (string), `tarefas` (qualquer) | Arquivo `.mbz` para download |
+| `/api/extract` | `quizzes` (docx), sem `matriz` | `{ quizzes }` — questões extraídas |
 
 ## Pipeline de dados
 
 ```
-matriz.docx ──→ parser.js (mammoth) ──→ texto puro
+matriz.docx ──→ POST /api/extract ──→ parser.js ──→ texto puro
                                             │
                                             ▼
-                                    extractor.js (Gemini 2.5 Flash)
+                                    extractor.js (Gemini, no backend)
                                             │
                                             ▼
                                     JSON estruturado

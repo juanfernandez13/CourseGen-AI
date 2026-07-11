@@ -113,8 +113,8 @@ export default function SettingsModal({ open, onClose }: Props) {
               Chave do Gemini
             </h3>
             <p className="mt-1 text-[12.5px]" style={{ color: 'var(--ink-2)' }}>
-              Sua chave fica salva apenas no <span className="font-mono-ui text-[11.5px]">localStorage</span> deste navegador
-              e só viaja ao servidor no momento da chamada à IA.
+              Sua chave fica salva no <span className="font-mono-ui text-[11.5px]">localStorage</span> deste navegador
+              e é enviada somente ao backend, que realiza a chamada ao Gemini.
             </p>
           </div>
 

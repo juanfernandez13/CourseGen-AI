@@ -294,7 +294,7 @@ export default function UploadStep({
             <FileChip name={matrizFile.name} onRemove={() => onMatrizChange(null)} onView={() => setViewFile(matrizFile)} />
           ) : (
             <DropZone
-              accept=".docx,.doc"
+              accept=".docx"
               multiple={false}
               onAdd={f => onMatrizChange(f[0])}
               dragging={dragMatriz}
@@ -320,7 +320,7 @@ export default function UploadStep({
           }
         >
           <DropZone
-            accept=".docx,.doc"
+            accept=".docx"
             multiple
             onAdd={f => onQuizzesChange([...quizFiles, ...f])}
             dragging={dragQuiz}

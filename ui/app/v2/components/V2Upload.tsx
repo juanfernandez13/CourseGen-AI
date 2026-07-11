@@ -107,7 +107,7 @@ export default function V2Upload({
                 </div>
               ) : (
                 <Dropzone
-                  accept=".docx,.doc"
+                  accept=".docx"
                   multiple={false}
                   onAdd={files => onMatrizChange(files[0])}
                   hint=".docx · .doc"
@@ -136,7 +136,7 @@ export default function V2Upload({
                 />
               ))}
               <Dropzone
-                accept=".docx,.doc"
+                accept=".docx"
                 multiple
                 onAdd={files => onQuizzesChange([...quizFiles, ...files])}
                 hint=".docx"

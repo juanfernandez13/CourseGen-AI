@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test server/"
+    "test": "node --test server/mbzGenerator/*.test.js"
   },
   "dependencies": {
     "@google/genai": "^1.45.0",

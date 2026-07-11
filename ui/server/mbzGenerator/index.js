@@ -7,17 +7,16 @@ const path = require('path');
 const os   = require('os');
 
 const {
-  sanitize, dateToTs, textToMoodleHtml, normalizeTitleBrackets, formatNotaBR,
-  embedAssignFiles, buildFilesXml,
+  sanitize, dateToTs, textToMoodleHtml, buildFilesXml,
 } = require('./utils');
 
 const {
   buildSectionXml, buildModuleXml,
-  buildForumDiscussionXml, buildChatXml, buildWikiXml, buildGlossaryXml,
-  buildQuizXml, buildQuestionsXml, buildAssignXml,
-  buildGradebook, buildActivityGradesXml,
+  buildQuestionsXml, buildGradebook,
   buildBlockXml, buildAgendaHtml, buildCourseSummary,
 } = require('./builders');
+const { createGenerationModel } = require('./model');
+const { writeActivities } = require('./activityWriter');
 
 // ── XML stub strings ──────────────────────────────────────────────────────────
 
@@ -30,18 +29,6 @@ const GRADE_HIST = `<?xml version="1.0" encoding="UTF-8"?>\n<grade_history>\n  <
 const COMPLETION = `<?xml version="1.0" encoding="UTF-8"?>\n<completions>\n  <completionviews>\n  </completionviews>\n</completions>`;
 const COMPETENCIES_ACT = `<?xml version="1.0" encoding="UTF-8"?>\n<course_module_competencies>\n  <competencies>\n  </competencies>\n</course_module_competencies>`;
 const INFOREF_EMPTY    = `<?xml version="1.0" encoding="UTF-8"?>\n<inforef>\n</inforef>`;
-
-function buildGradingXml(areaId, areaname) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<areas>
-  <area id="${areaId}">
-    <areaname>${areaname}</areaname>
-    <activemethod>$@NULL@$</activemethod>
-    <definitions>
-    </definitions>
-  </area>
-</areas>`;
-}
 
 // ── Archive helpers ───────────────────────────────────────────────────────────
 
@@ -83,83 +70,8 @@ async function generateMBZ(matrizData) {
   const tmpDir     = fs.mkdtempSync(path.join(os.tmpdir(), 'mbz-'));
   const outputPath = path.join(os.tmpdir(), `matriz_${Date.now()}.mbz`);
   const now        = Math.floor(Date.now() / 1000);
-
-  const base      = Math.floor(Math.random() * 80000) + 10000;
-  const catId     = base + 1;
-  const contextId = base + 2;
-  const backupId  = crypto.randomUUID().replace(/-/g, '');
-
-  const disciplina   = matrizData.disciplina   || {};
-  const professor    = matrizData.professor    || {};
-  const aulas        = matrizData.aulas        || [];
-  const livroDeNotas = matrizData.livro_de_notas || {};
-  const categorias   = livroDeNotas.categorias || [
-    { nome: 'Atividades a distância', peso: 40 },
-    { nome: 'Atividades presenciais', peso: 60 },
-  ];
-  const encontros  = matrizData.encontros  || [];
-  const frequencia = matrizData.frequencia || {};
-
-  const shortname = sanitize(disciplina.codigo || 'DISC001');
-  const fullname  = sanitize(disciplina.nome   || 'Disciplina');
-
-  // ── IDs ────────────────────────────────────────────────────────────────────
-  const block1Id  = base + 50;  // Professores(as)
-  const block1Ctx = base + 53;
-  const block2Id  = base + 51;  // Agenda
-  const block2Ctx = base + 54;
-  const block3Id  = base + 52;  // Encontros virtuais
-  const block3Ctx = base + 55;
-  const sec0Id    = base + 200;
-  const sec0Title = disciplina.polo
-    ? `${fullname} / ${sanitize(disciplina.polo)}`
-    : fullname;
-
-  // Each aula gets a block of 20 IDs starting at base+300
-  const aulaIds = aulas.map((_, i) => ({
-    sectionId:    base + 300 + i * 20,
-    forumId:      base + 301 + i * 20,
-    forumCtx:     base + 302 + i * 20,
-    quizId:       base + 303 + i * 20,
-    quizCtx:      base + 304 + i * 20,
-    assignId:     base + 305 + i * 20,
-    assignCtx:    base + 306 + i * 20,
-    chatId:       base + 307 + i * 20,
-    chatCtx:      base + 308 + i * 20,
-    wikiId:       base + 309 + i * 20,
-    wikiCtx:      base + 310 + i * 20,
-    wikiAssignId: base + 311 + i * 20,
-    wikiAssignCtx:base + 312 + i * 20,
-    glossaryId:   base + 313 + i * 20,
-    glossaryCtx:  base + 314 + i * 20,
-  }));
-
-  // Each encontro gets 4 IDs (notaId, notaCtx, faltaId, faltaCtx)
-  const encontrosBase = base + 300 + aulas.length * 20 + 100;
-  const encontrosIds  = encontros.map((_, i) => ({
-    notaId:   encontrosBase + i * 4,
-    notaCtx:  encontrosBase + i * 4 + 1,
-    faltaId:  encontrosBase + i * 4 + 2,
-    faltaCtx: encontrosBase + i * 4 + 3,
-  }));
-
-  // Avaliação Final — always present
-  const afBase          = encontrosBase + encontros.length * 4 + 10;
-  const avFinalId       = afBase;
-  const avFinalCtx      = afBase + 1;
-  const avSectionId     = afBase + 2;
-  const faltasSectionId = afBase + 3;
-  const avFinal         = matrizData.avaliacao_final || {};
-
-  // Gradebook IDs
-  const rootCatId           = catId;
-  const eadCatId            = catId + 1000;
-  const presencialCatId     = catId + 1001;
-  const courseGradeItemId   = catId + 2000;
-  const eadCatItemId        = catId + 2001;
-  const presencialCatItemId = catId + 2002;
-
-  // Collects file metadata for files.xml
+  const base = Math.floor(Math.random() * 80000) + 10000;
+  const model = createGenerationModel(matrizData, base);
   const fileEntries = [];
 
   // ── Write helper (scoped to tmpDir) ───────────────────────────────────────
@@ -183,92 +95,38 @@ async function generateMBZ(matrizData) {
     write(`${dir}/inforef.xml`,       INFOREF_EMPTY);
   }
 
-  // ── allActivities / allSections ────────────────────────────────────────────
-  const allActivities = [
-    ...aulas.flatMap((aula, i) => {
-      const ids  = aulaIds[i];
-      const acts = [];
-      if (aula.forum) acts.push({
-        moduleid: ids.forumId, sectionid: ids.sectionId, modulename: 'forum',
-        title: sanitize(normalizeTitleBrackets(aula.forum.titulo || `Fórum ${i + 1}`)),
-        dir: `activities/forum_${ids.forumId}`,
-      });
-      if (aula.quiz) acts.push({
-        moduleid: ids.quizId, sectionid: ids.sectionId, modulename: 'quiz',
-        title: sanitize(normalizeTitleBrackets(aula.quiz?.titulo || `Questionário ${i + 1}`)),
-        dir: `activities/quiz_${ids.quizId}`,
-      });
-      if (aula.chat) {
-        acts.push({
-          moduleid: ids.chatId, sectionid: ids.sectionId, modulename: 'chat',
-          title: sanitize(normalizeTitleBrackets(aula.chat.titulo || `Chat ${i + 1}`)),
-          dir: `activities/chat_${ids.chatId}`,
-        });
-        // Assign oculto para lançar nota do chat
-        acts.push({
-          moduleid: ids.assignId, sectionid: ids.sectionId, modulename: 'assign',
-          title: sanitize(normalizeTitleBrackets(aula.chat.nota_titulo || `[Aula ${i + 1}] [Chat ${i + 1}] ${aula.chat.titulo || ''} [${formatNotaBR(aula.chat.nota || 10)}]`)),
-          dir: `activities/assign_${ids.assignId}`,
-        });
-      }
-      if (aula.wiki) {
-        acts.push({
-          moduleid: ids.wikiId, sectionid: ids.sectionId, modulename: 'wiki',
-          title: sanitize(normalizeTitleBrackets(aula.wiki.titulo || `Wiki ${i + 1}`)),
-          dir: `activities/wiki_${ids.wikiId}`,
-        });
-        // Assign oculto para lançar nota da wiki
-        acts.push({
-          moduleid: ids.wikiAssignId, sectionid: ids.sectionId, modulename: 'assign',
-          title: sanitize(normalizeTitleBrackets(aula.wiki.nota_titulo || `[Aula ${i + 1}] [Wiki ${i + 1}] ${aula.wiki.titulo || ''} [${formatNotaBR(aula.wiki.nota || 10)}]`)),
-          dir: `activities/assign_${ids.wikiAssignId}`,
-        });
-      }
-      if (aula.glossario) acts.push({
-        moduleid: ids.glossaryId, sectionid: ids.sectionId, modulename: 'glossary',
-        title: sanitize(normalizeTitleBrackets(aula.glossario.titulo || `Glossário ${i + 1}`)),
-        dir: `activities/glossary_${ids.glossaryId}`,
-      });
-      if (!aula.chat && aula.tarefa) acts.push({
-        moduleid: ids.assignId, sectionid: ids.sectionId, modulename: 'assign',
-        title: sanitize(normalizeTitleBrackets(aula.tarefa?.titulo || `Tarefa ${i + 1}`)),
-        dir: `activities/assign_${ids.assignId}`,
-      });
-      return acts;
-    }),
-    // Encontros: nota assign (Avaliações) + falta assign (Faltas)
-    ...encontros.flatMap((enc, i) => {
-      const acts = [];
-      if (enc.avaliacao === 'nota_media') acts.push({
-        moduleid: encontrosIds[i].notaId, sectionid: avSectionId, modulename: 'assign',
-        title: sanitize(normalizeTitleBrackets(enc.nota_titulo || `[Encontro ${enc.numero || i + 1}] [Nota]`)),
-        dir: `activities/assign_${encontrosIds[i].notaId}`,
-      });
-      acts.push({
-        moduleid: encontrosIds[i].faltaId, sectionid: faltasSectionId, modulename: 'assign',
-        title: sanitize(normalizeTitleBrackets(enc.falta_titulo || `[Encontro ${enc.numero || i + 1}] [Faltas]`)),
-        dir: `activities/assign_${encontrosIds[i].faltaId}`,
-      });
-      return acts;
-    }),
-    // Avaliação Final (sempre presente)
-    {
-      moduleid: avFinalId, sectionid: avSectionId, modulename: 'assign',
-      title: sanitize(normalizeTitleBrackets(avFinal.titulo || '[Disciplina] [Avaliação Final]')),
-      dir: `activities/assign_${avFinalId}`,
-    },
-  ];
+  try {
+    writeBackupContents({
+      matrizData,
+      model,
+      now,
+      backupId: crypto.randomUUID().replace(/-/g, ''),
+      write,
+      writeActivityStubs,
+      fileEntries,
+    });
+    write('.ARCHIVE_INDEX', buildArchiveIndex(tmpDir, now));
+    await tarGzDirectory(tmpDir, outputPath);
+    return outputPath;
+  } catch (error) {
+    fs.rmSync(outputPath, { force: true });
+    throw error;
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
 
-  const allSections = [
-    { sectionid: sec0Id, title: sec0Title, dir: `sections/section_${sec0Id}` },
-    ...aulaIds.map((ids, i) => ({
-      sectionid: ids.sectionId,
-      title: sanitize(aulas[i]?.titulo || `Aula ${i + 1}`),
-      dir: `sections/section_${ids.sectionId}`,
-    })),
-    { sectionid: avSectionId,     title: 'Avaliações', dir: `sections/section_${avSectionId}` },
-    { sectionid: faltasSectionId, title: 'Faltas',     dir: `sections/section_${faltasSectionId}` },
-  ];
+/** Writes the Moodle tree; archive lifecycle stays in generateMBZ. */
+function writeBackupContents({ matrizData, model, now, backupId, write, writeActivityStubs, fileEntries }) {
+  const {
+    disciplina, professor, aulas, encontros, categorias,
+    shortname, fullname, blocks, sec0Id, sec0Title, allActivities, allSections, ids,
+  } = model;
+  const {
+    base, catId, contextId, aulaIds, encontrosIds, avFinalId,
+    avSectionId, faltasSectionId, rootCatId, eadCatId, presencialCatId,
+    courseGradeItemId, eadCatItemId, presencialCatItemId,
+  } = ids;
 
   // ── moodle_backup.xml ──────────────────────────────────────────────────────
   const secSettings = allSections.map(s => {
@@ -509,7 +367,7 @@ ${actSettings}
     const profText =
       `<p dir="ltr" style="text-align: left;">Professor(a): ${sanitize(professor.nome || '')}</p>` +
       `<p dir="ltr" style="text-align: left;">Tutor(a): ${sanitize(professor.tutor || '')}</p>`;
-    writeBlock(block1Id, block1Ctx, 'Professores(as)', profText, 1, -3);
+    writeBlock(blocks.professores.id, blocks.professores.ctx, 'Professores(as)', profText, 1, -3);
   }
   {
     const evText =
@@ -524,11 +382,11 @@ ${actSettings}
         `<p dir="ltr">💻 ${i === 0 ? 'Primeiro encontro' : `Encontro ${enc.numero || i + 1}`}:&nbsp;${sanitize(enc.link_gravacao || '')}</p>`
       ).join('') +
       `<p></p>`;
-    writeBlock(block3Id, block3Ctx, 'Encontros virtuais', evText, 1, -2);
+    writeBlock(blocks.encontros.id, blocks.encontros.ctx, 'Encontros virtuais', evText, 1, -2);
   }
   {
     const agendaText = buildAgendaHtml(aulas, encontros);
-    writeBlock(block2Id, block2Ctx, 'Agenda', agendaText, 2, -1);
+    writeBlock(blocks.agenda.id, blocks.agenda.ctx, 'Agenda', agendaText, 2, -1);
   }
 
   // ── Avaliações section ─────────────────────────────────────────────────────
@@ -547,162 +405,7 @@ ${actSettings}
     buildSectionXml(faltasSectionId, avSecNum + 1, 'Faltas', '', faltasSeq, 0, now));
   write(`sections/section_${faltasSectionId}/inforef.xml`, INFOREF_EMPTY);
 
-  // ── Per-aula activities ────────────────────────────────────────────────────
-  for (const [i, aula] of aulas.entries()) {
-    const ids    = aulaIds[i];
-    const secNum = i + 1;
-    const tsAula = dateToTs(aula.data_inicio);
-
-    // Fórum (EaD category)
-    if (aula.forum) {
-      const forumDir = `activities/forum_${ids.forumId}`;
-      const tsStart  = dateToTs(aula.forum.data_inicio || aula.data_inicio);
-      const tsEnd    = dateToTs(aula.forum.data_fim    || aula.data_fim, true, '23:55:00');
-      write(`${forumDir}/forum.xml`, buildForumDiscussionXml(ids.forumId, ids.forumCtx, aula, now));
-      writeActivityStubs(forumDir, ids.forumId, 'forum', ids.sectionId, secNum, tsStart,
-        buildActivityGradesXml(ids.forumId, eadCatId, aula.forum.titulo || `Fórum ${i + 1}`, 'forum', i * 3 + 10, now, 1),
-        tsEnd);
-      write(`${forumDir}/grading.xml`, buildGradingXml(ids.forumId + 70000, 'forum'));
-    }
-
-    // Quiz (EaD category)
-    if (aula.quiz) {
-      const quizDir = `activities/quiz_${ids.quizId}`;
-      write(`${quizDir}/quiz.xml`, buildQuizXml(ids.quizId, ids.quizCtx, aula, now));
-      writeActivityStubs(quizDir, ids.quizId, 'quiz', ids.sectionId, secNum, 0,
-        buildActivityGradesXml(ids.quizId, eadCatId, aula.quiz?.titulo || `Questionário ${i + 1}`, 'quiz', i * 3 + 11, now));
-      if (aula.quiz.questoes?.length) {
-        const gradeItemId = ids.quizId + 90000;
-        const catTopId    = ids.quizId + 2000000;
-        const catDefId    = ids.quizId + 2001000;
-        write(`${quizDir}/inforef.xml`, `<?xml version="1.0" encoding="UTF-8"?>
-<inforef>
-  <grade_itemref>
-    <grade_item>
-      <id>${gradeItemId}</id>
-    </grade_item>
-  </grade_itemref>
-  <question_categoryref>
-    <question_category>
-      <id>${catTopId}</id>
-    </question_category>
-    <question_category>
-      <id>${catDefId}</id>
-    </question_category>
-  </question_categoryref>
-</inforef>`);
-      }
-    }
-
-    // Chat (EaD category) + assign oculto para nota
-    if (aula.chat) {
-      const chatDir  = `activities/chat_${ids.chatId}`;
-      const tsStart  = dateToTs(aula.chat.data_inicio || aula.data_inicio);
-      const tsEnd    = dateToTs(aula.chat.data_fim    || aula.data_fim, true, '23:55:00');
-      write(`${chatDir}/chat.xml`, buildChatXml(ids.chatId, ids.chatCtx, aula, now));
-      writeActivityStubs(chatDir, ids.chatId, 'chat', ids.sectionId, secNum, tsStart, GRADES, tsEnd);
-
-      // Assign oculto para lançar a nota do chat
-      const chatAssignDir = `activities/assign_${ids.assignId}`;
-      const chatNotaTitulo = sanitize(normalizeTitleBrackets(
-        aula.chat.nota_titulo || `[Aula ${i + 1}] [Chat ${i + 1}] ${aula.chat.titulo || ''} [${formatNotaBR(aula.chat.nota || 10)}]`
-      ));
-      write(`${chatAssignDir}/assign.xml`, buildAssignXml(ids.assignId, ids.assignCtx,
-        { tarefa: { titulo: chatNotaTitulo, descricao: 'Atividade para receber a nota do chat' } }, now, [], true));
-      writeActivityStubs(chatAssignDir, ids.assignId, 'assign', ids.sectionId, secNum, 0,
-        buildActivityGradesXml(ids.assignId, eadCatId, chatNotaTitulo, 'assign', i * 3 + 12, now),
-        0, { visible: 0, showdescription: 1 });
-      write(`${chatAssignDir}/grading.xml`, buildGradingXml(ids.assignId + 70000, 'submissions'));
-    }
-
-    // Wiki (EaD category) + assign oculto para nota
-    if (aula.wiki) {
-      const wikiDir  = `activities/wiki_${ids.wikiId}`;
-      const tsStart  = dateToTs(aula.wiki.data_inicio || aula.data_inicio);
-      const tsEnd    = dateToTs(aula.wiki.data_fim    || aula.data_fim, true, '23:55:00');
-      write(`${wikiDir}/wiki.xml`, buildWikiXml(ids.wikiId, ids.wikiCtx, aula, now));
-      writeActivityStubs(wikiDir, ids.wikiId, 'wiki', ids.sectionId, secNum, tsStart, GRADES, tsEnd);
-
-      // Assign oculto para lançar a nota da wiki
-      const wikiAssignDir = `activities/assign_${ids.wikiAssignId}`;
-      const wikiNotaTitulo = sanitize(normalizeTitleBrackets(
-        aula.wiki.nota_titulo || `[Aula ${i + 1}] [Wiki ${i + 1}] ${aula.wiki.titulo || ''} [${formatNotaBR(aula.wiki.nota || 10)}]`
-      ));
-      write(`${wikiAssignDir}/assign.xml`, buildAssignXml(ids.wikiAssignId, ids.wikiAssignCtx,
-        { tarefa: { titulo: wikiNotaTitulo, descricao: '' } }, now, [], true));
-      writeActivityStubs(wikiAssignDir, ids.wikiAssignId, 'assign', ids.sectionId, secNum, 0,
-        buildActivityGradesXml(ids.wikiAssignId, eadCatId, wikiNotaTitulo, 'assign', i * 3 + 13, now),
-        0, { visible: 0 });
-      write(`${wikiAssignDir}/grading.xml`, buildGradingXml(ids.wikiAssignId + 70000, 'submissions'));
-    }
-
-    // Glossário (EaD category) — tem nota própria (assessed)
-    if (aula.glossario) {
-      const glossaryDir = `activities/glossary_${ids.glossaryId}`;
-      const tsStart     = dateToTs(aula.glossario.data_inicio || aula.data_inicio);
-      const tsEnd       = dateToTs(aula.glossario.data_fim    || aula.data_fim, true, '23:55:00');
-      write(`${glossaryDir}/glossary.xml`, buildGlossaryXml(ids.glossaryId, ids.glossaryCtx, aula, now));
-      writeActivityStubs(glossaryDir, ids.glossaryId, 'glossary', ids.sectionId, secNum, tsStart,
-        buildActivityGradesXml(ids.glossaryId, eadCatId, aula.glossario.titulo || `Glossário ${i + 1}`, 'glossary', i * 3 + 14, now),
-        tsEnd);
-    }
-
-    // Tarefa (EaD category)
-    if (!aula.chat && aula.tarefa) {
-      const assignDir = `activities/assign_${ids.assignId}`;
-      const arquivos  = (aula.tarefa.arquivos || []).filter(arq => {
-        if (!arq?.filePath) return false;
-        try { fs.statSync(arq.filePath); return true; } catch { return false; }
-      });
-      write(`${assignDir}/assign.xml`, buildAssignXml(ids.assignId, ids.assignCtx, aula, now, arquivos));
-      writeActivityStubs(assignDir, ids.assignId, 'assign', ids.sectionId, secNum, 0,
-        buildActivityGradesXml(ids.assignId, eadCatId, aula.tarefa?.titulo || `Tarefa ${i + 1}`, 'assign', i * 3 + 12, now));
-      write(`${assignDir}/grading.xml`, buildGradingXml(ids.assignId + 70000, 'submissions'));
-      if (arquivos.length) {
-        const idxBefore   = fileEntries.length;
-        for (const { hash, content } of embedAssignFiles(ids.assignCtx, arquivos, fileEntries)) {
-          write(`files/${hash.slice(0, 2)}/${hash}`, content);
-        }
-        const gradeItemId = ids.assignId + 90000;
-        fileEntries._assignInforefs = fileEntries._assignInforefs || [];
-        fileEntries._assignInforefs.push({ dir: assignDir, gradeItemId, idxStart: idxBefore, idxEnd: fileEntries.length });
-      }
-    }
-  }
-
-  // ── Encontros: nota (Avaliações) + falta (Faltas) ─────────────────────────
-  for (const [i, enc] of encontros.entries()) {
-    const ids        = encontrosIds[i];
-    const notaTitulo  = sanitize(normalizeTitleBrackets(enc.nota_titulo  || `[Encontro ${enc.numero || i + 1}] [Nota]`));
-    const faltaTitulo = sanitize(normalizeTitleBrackets(enc.falta_titulo || `[Encontro ${enc.numero || i + 1}] [Faltas]`));
-    const faltaDesc   = enc.titulo || enc.descricao || '';
-
-    if (enc.avaliacao === 'nota_media') {
-      const notaDir = `activities/assign_${ids.notaId}`;
-      write(`${notaDir}/assign.xml`, buildAssignXml(ids.notaId, ids.notaCtx,
-        { tarefa: { titulo: notaTitulo, descricao: enc.descricao || '' } }, now, [], true));
-      writeActivityStubs(notaDir, ids.notaId, 'assign', avSectionId, avSecNum, 0,
-        buildActivityGradesXml(ids.notaId, presencialCatId, notaTitulo, 'assign', 500 + i * 2, now));
-      write(`${notaDir}/grading.xml`, buildGradingXml(ids.notaId + 70000, 'submissions'));
-    }
-
-    const faltaDir = `activities/assign_${ids.faltaId}`;
-    write(`${faltaDir}/assign.xml`, buildAssignXml(ids.faltaId, ids.faltaCtx,
-      { tarefa: { titulo: faltaTitulo, descricao: faltaDesc } }, now, [], true));
-    writeActivityStubs(faltaDir, ids.faltaId, 'assign', faltasSectionId, avSecNum + 1, 0);
-    write(`${faltaDir}/grading.xml`, buildGradingXml(ids.faltaId + 70000, 'submissions'));
-  }
-
-  // ── Avaliação Final ────────────────────────────────────────────────────────
-  {
-    const titulo = sanitize(normalizeTitleBrackets(avFinal.titulo || '[Disciplina] [Avaliação Final]'));
-    const dir    = `activities/assign_${avFinalId}`;
-    write(`${dir}/assign.xml`, buildAssignXml(avFinalId, avFinalCtx,
-      { tarefa: { titulo, descricao: avFinal.descricao || '' } }, now, [], true));
-    writeActivityStubs(dir, avFinalId, 'assign', avSectionId, avSecNum, 0,
-      buildActivityGradesXml(avFinalId, rootCatId, titulo, 'assign', 549, now));
-    write(`${dir}/grading.xml`, buildGradingXml(avFinalId + 70000, 'submissions'));
-  }
+  writeActivities({ model, now, write, writeActivityStubs, fileEntries, emptyGrades: GRADES });
 
   // ── Root files ─────────────────────────────────────────────────────────────
   write('files.xml', buildFilesXml(fileEntries, now));
@@ -737,11 +440,6 @@ ${fileRefs}
   write('scales.xml',       `<?xml version="1.0" encoding="UTF-8"?>\n<scales_definition>\n</scales_definition>`);
   write('grade_history.xml', GRADE_HIST);
   write('users.xml',        `<?xml version="1.0" encoding="UTF-8"?>\n<users>\n</users>`);
-  write('.ARCHIVE_INDEX',   buildArchiveIndex(tmpDir, now));
-
-  await tarGzDirectory(tmpDir, outputPath);
-  fs.rmSync(tmpDir, { recursive: true, force: true });
-  return outputPath;
 }
 
 module.exports = { generateMBZ };
