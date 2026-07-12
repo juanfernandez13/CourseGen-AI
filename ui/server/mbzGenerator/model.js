@@ -8,6 +8,7 @@ const { sanitize, normalizeTitleBrackets, formatNotaBR } = require('./utils');
  */
 function createGenerationModel(matrizData, base) {
   const disciplina = matrizData.disciplina || {};
+  const mural = normalizeMural(matrizData.mural || {});
   const professor = matrizData.professor || {};
   const aulas = matrizData.aulas || [];
   const encontros = matrizData.encontros || [];
@@ -28,9 +29,9 @@ function createGenerationModel(matrizData, base) {
     encontros: { id: base + 52, ctx: base + 55 },
   };
   const sec0Id = base + 200;
-  const sec0Title = disciplina.polo
+  const sec0Title = mural.titulo || (disciplina.polo
     ? `${fullname} / ${sanitize(disciplina.polo)}`
-    : fullname;
+    : fullname);
 
   const aulaIds = aulas.map((_, i) => ({
     sectionId: base + 300 + i * 20,
@@ -90,8 +91,47 @@ function createGenerationModel(matrizData, base) {
   ];
 
   return {
-    matrizData, disciplina, professor, aulas, encontros, avFinal, categorias,
+    matrizData, disciplina, mural, professor, aulas, encontros, avFinal, categorias,
     shortname, fullname, blocks, sec0Id, sec0Title, allActivities, allSections, ids,
+  };
+}
+
+const MURAL_END_MARKERS = [
+  /^bons estudos!?$/i,
+  /^livro da disciplina$/i,
+  /^pud$/i,
+  /^biblioteca$/i,
+  /^f[oó]rum tira[- ]?d[uú]vidas$/i,
+  /^professores?\(as\)$/i,
+  /^agenda$/i,
+  /^navega[cç][aã]o$/i,
+  /^administra[cç][aã]o$/i,
+];
+
+/** Keeps only the pedagogical message and extracts a literal mural heading. */
+function normalizeMural(rawMural) {
+  const lines = String(rawMural.descricao || '')
+    .split(/\r?\n+/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  let titulo = String(rawMural.titulo || '').trim();
+
+  if (!titulo && lines[0] && /\/\s*polo\b/i.test(lines[0])) {
+    titulo = lines.shift();
+  } else if (titulo && lines[0] === titulo) {
+    lines.shift();
+  }
+
+  const welcomeIndex = lines.findIndex(line => /^seja bem-vind[oa]\(a\)!?$/i.test(line));
+  let content = welcomeIndex >= 0
+    ? lines.slice(welcomeIndex)
+    : lines.filter((line, index) => !(index === 0 && /^car[oa]\(a\) alun[oa]\(a\),?$/i.test(line)));
+  const endIndex = content.findIndex(line => MURAL_END_MARKERS.some(pattern => pattern.test(line)));
+  if (endIndex >= 0) content = content.slice(0, endIndex);
+
+  return {
+    titulo: sanitize(titulo),
+    descricao: content.join('\n\n'),
   };
 }
 
@@ -139,4 +179,4 @@ function activity(moduleid, sectionid, modulename, title) {
   };
 }
 
-module.exports = { createGenerationModel };
+module.exports = { createGenerationModel, normalizeMural };

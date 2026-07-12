@@ -3,6 +3,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { generateMBZ } from '../../../server/mbzGenerator';
+import { mapTaskFiles } from '../../../server/taskFileMapper';
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
@@ -32,15 +33,7 @@ export async function POST(req: NextRequest) {
       tarefaTmpPaths.push({ filePath: tPath, filename: tf.name });
     }
 
-    const tarefaFilesMap: Record<number, { filePath: string; filename: string }[]> = {};
-    for (const tf of tarefaTmpPaths) {
-      const match = tf.filename.match(/tarefa[_-]?(\d+)/i);
-      if (match) {
-        const num = parseInt(match[1]);
-        if (!tarefaFilesMap[num]) tarefaFilesMap[num] = [];
-        tarefaFilesMap[num].push(tf);
-      }
-    }
+    const tarefaFilesMap = mapTaskFiles(tarefaTmpPaths);
     let tarefaCounter = 0;
     for (const aula of (matrizData.aulas as Array<Record<string, unknown>>) || []) {
       if (aula.tarefa) {

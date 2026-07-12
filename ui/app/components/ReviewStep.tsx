@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import FileViewer from './FileViewer';
 import type { useJsonHistory } from '../lib/useJsonHistory';
+import { mapTaskFiles } from '../../server/taskFileMapper';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 type QuestaoItem = { texto: string; isCorrect?: boolean; resposta?: string };
@@ -27,20 +28,6 @@ type MatrizData = {
 function parseJsonSafe(raw: string): { data: MatrizData | null; error: string | null } {
   try   { return { data: JSON.parse(raw) as MatrizData, error: null }; }
   catch (e) { return { data: null, error: e instanceof SyntaxError ? e.message : 'JSON inválido.' }; }
-}
-
-/** Map tarefa_N.ext → tarefaNum */
-function buildTarefaMap(files: File[]): Record<number, File[]> {
-  const map: Record<number, File[]> = {};
-  for (const f of files) {
-    const m = f.name.match(/tarefa[_-]?(\d+)/i);
-    if (m) {
-      const n = parseInt(m[1]);
-      if (!map[n]) map[n] = [];
-      map[n].push(f);
-    }
-  }
-  return map;
 }
 
 function Spinner() {
@@ -597,7 +584,7 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
   const [showHistory, setShowHistory] = useState(false);
   const { data, error: parseError } = parseJsonSafe(json);
   const canGenerate = !parseError && !loading;
-  const tarefaMap = buildTarefaMap(tarefaFiles);
+  const tarefaMap = mapTaskFiles(tarefaFiles);
   const hasHistory = history && history.versions.length > 0;
 
   return (

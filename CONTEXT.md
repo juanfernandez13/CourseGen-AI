@@ -63,6 +63,8 @@ server/mbzGenerator/
 - `generateMBZ()` deve continuar pequeno e responsável apenas pelo ciclo de vida do workspace/arquivo.
 - Toda mudança de XML deve ganhar teste antes de alterar offsets ou referências cruzadas.
 - A pasta temporária deve ser removida em `finally`.
+- O mural possui `titulo` literal próprio e `descricao` apenas com a mensagem pedagógica; menus, pessoas, navegação, vocativo e encerramento não pertencem ao conteúdo.
+- Polos listados na tabela de tutores não devem preencher `disciplina.polo` nem substituir o placeholder `/ Polo` do título do mural.
 
 ## Estrutura gerada no Moodle
 
@@ -79,7 +81,8 @@ Atividades suportadas: fórum, quiz, tarefa, chat, wiki e glossário. Chat e wik
 ## Associação de arquivos
 
 - Quizzes são associados por ordem aos objetos `aula.quiz`.
-- `tarefa_1.*` é associada à primeira tarefa, `tarefa_2.*` à segunda etc.
+- `Tarefa 1.*`, `tarefa_1.*` ou `tarefa-1.*` são associados pelo número explícito.
+- Arquivos sem número são agrupados pelo mesmo nome-base, ordenados alfabeticamente e associados às posições ainda livres.
 - Anexos usam SHA-1 e `filearea=introattachment` no padrão do Moodle.
 
 ## Comandos

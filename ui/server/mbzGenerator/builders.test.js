@@ -3,10 +3,36 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { buildQuizXml, buildQuestionsXml } = require('./builders');
+const {
+  buildQuizXml, buildQuestionsXml, buildGradebook, buildActivityInforef,
+} = require('./builders');
 const { PROMPT_QUIZ_BATCH, PROMPT_SCHEMA } = require('../extractor');
 
 const NOW = 1700000000;
+
+test('buildGradebook: totais das subcategorias seguem o formato do backup Moodle', () => {
+  const xml = buildGradebook(100, 200, 300, 400, 500, 600, [], NOW);
+  const eadItem = xml.match(/<grade_item id="500">([\s\S]*?)<\/grade_item>/)?.[1];
+  const presencialItem = xml.match(/<grade_item id="600">([\s\S]*?)<\/grade_item>/)?.[1];
+
+  assert.match(eadItem, /<categoryid>\$@NULL@\$<\/categoryid>/);
+  assert.match(eadItem, /<sortorder>2<\/sortorder>/);
+  assert.match(presencialItem, /<categoryid>\$@NULL@\$<\/categoryid>/);
+  assert.match(presencialItem, /<sortorder>500<\/sortorder>/);
+  assert.match(xml, /<grade_setting id="3100">/);
+});
+
+test('buildActivityInforef: preserva referências de nota, arquivos e questões', () => {
+  const xml = buildActivityInforef({
+    gradeItemId: 90123,
+    fileIds: [10, 11],
+    questionCategoryIds: [20, 21],
+  });
+
+  assert.match(xml, /<grade_item>[\s\S]*<id>90123<\/id>/);
+  assert.match(xml, /<fileref>[\s\S]*<id>10<\/id>[\s\S]*<id>11<\/id>/);
+  assert.match(xml, /<question_categoryref>[\s\S]*<id>20<\/id>[\s\S]*<id>21<\/id>/);
+});
 
 function makeAula(quiz = {}) {
   return {

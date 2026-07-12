@@ -12,7 +12,7 @@ const {
 
 const {
   buildSectionXml, buildModuleXml,
-  buildQuestionsXml, buildGradebook,
+  buildQuestionsXml, buildGradebook, buildActivityInforef,
   buildBlockXml, buildAgendaHtml, buildCourseSummary,
 } = require('./builders');
 const { createGenerationModel } = require('./model');
@@ -92,7 +92,9 @@ async function generateMBZ(matrizData) {
     write(`${dir}/filters.xml`,       FILTERS);
     write(`${dir}/competencies.xml`,  COMPETENCIES_ACT);
     write(`${dir}/roles.xml`,         ROLES);
-    write(`${dir}/inforef.xml`,       INFOREF_EMPTY);
+    write(`${dir}/inforef.xml`,       gradesXml === GRADES
+      ? INFOREF_EMPTY
+      : buildActivityInforef({ gradeItemId: modId + 90000 }));
   }
 
   try {
@@ -119,7 +121,7 @@ async function generateMBZ(matrizData) {
 /** Writes the Moodle tree; archive lifecycle stays in generateMBZ. */
 function writeBackupContents({ matrizData, model, now, backupId, write, writeActivityStubs, fileEntries }) {
   const {
-    disciplina, professor, aulas, encontros, categorias,
+    disciplina, mural, professor, aulas, encontros, categorias,
     shortname, fullname, blocks, sec0Id, sec0Title, allActivities, allSections, ids,
   } = model;
   const {
@@ -132,13 +134,13 @@ function writeBackupContents({ matrizData, model, now, backupId, write, writeAct
   const secSettings = allSections.map(s => {
     const k = `section_${s.sectionid}`;
     return `      <setting><level>section</level><section>${k}</section><name>${k}_included</name><value>1</value></setting>\n` +
-           `      <setting><level>section</level><section>${k}</section><name>${k}_userinfo</name><value>1</value></setting>`;
+           `      <setting><level>section</level><section>${k}</section><name>${k}_userinfo</name><value>0</value></setting>`;
   }).join('\n');
 
   const actSettings = allActivities.map(a => {
     const k = `${a.modulename}_${a.moduleid}`;
     return `      <setting><level>activity</level><activity>${k}</activity><name>${k}_included</name><value>1</value></setting>\n` +
-           `      <setting><level>activity</level><activity>${k}</activity><name>${k}_userinfo</name><value>1</value></setting>`;
+           `      <setting><level>activity</level><activity>${k}</activity><name>${k}_userinfo</name><value>0</value></setting>`;
   }).join('\n');
 
   // Blocks are discovered automatically by Moodle from course/blocks/
@@ -197,10 +199,10 @@ ${allSections.map(s => `        <section>\n          <sectionid>${s.sectionid}</
       <setting><level>root</level><name>blocks</name><value>1</value></setting>
       <setting><level>root</level><name>files</name><value>1</value></setting>
       <setting><level>root</level><name>filters</name><value>1</value></setting>
-      <setting><level>root</level><name>comments</name><value>1</value></setting>
-      <setting><level>root</level><name>badges</name><value>1</value></setting>
+      <setting><level>root</level><name>comments</name><value>0</value></setting>
+      <setting><level>root</level><name>badges</name><value>0</value></setting>
       <setting><level>root</level><name>calendarevents</name><value>1</value></setting>
-      <setting><level>root</level><name>userscompletion</name><value>1</value></setting>
+      <setting><level>root</level><name>userscompletion</name><value>0</value></setting>
       <setting><level>root</level><name>logs</name><value>0</value></setting>
       <setting><level>root</level><name>grade_histories</name><value>0</value></setting>
       <setting><level>root</level><name>questionbank</name><value>1</value></setting>
@@ -323,7 +325,7 @@ ${actSettings}
   write('course/inforef.xml',     INFOREF_EMPTY);
 
   // ── sections ───────────────────────────────────────────────────────────────
-  const sec0Summary = textToMoodleHtml((matrizData.mural || {}).descricao || '');
+  const sec0Summary = textToMoodleHtml(mural.descricao);
   write(`sections/section_${sec0Id}/section.xml`, buildSectionXml(sec0Id, 0, sec0Title, sec0Summary, [], 0, now));
   write(`sections/section_${sec0Id}/inforef.xml`, INFOREF_EMPTY);
 
@@ -414,20 +416,10 @@ ${actSettings}
   for (const { dir, gradeItemId, idxStart, idxEnd } of (fileEntries._assignInforefs || [])) {
     const dirId    = fileEntries[idxStart]._xmlId - 1;
     const fileIds  = fileEntries.slice(idxStart, idxEnd).map(e => e._xmlId);
-    const fileRefs = [dirId, ...fileIds]
-      .map(fid => `    <file>\n      <id>${fid}</id>\n    </file>`)
-      .join('\n');
-    write(`${dir}/inforef.xml`, `<?xml version="1.0" encoding="UTF-8"?>
-<inforef>
-  <fileref>
-${fileRefs}
-  </fileref>
-  <grade_itemref>
-    <grade_item>
-      <id>${gradeItemId}</id>
-    </grade_item>
-  </grade_itemref>
-</inforef>`);
+    write(`${dir}/inforef.xml`, buildActivityInforef({
+      gradeItemId,
+      fileIds: [dirId, ...fileIds],
+    }));
   }
 
   write('questions.xml',    buildQuestionsXml(aulas, aulaIds, now));

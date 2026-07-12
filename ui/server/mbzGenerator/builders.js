@@ -738,7 +738,7 @@ function buildGradebook(rootCatId, eadCatId, presencialCatId, courseItemId, eadI
       <aggregationcoef>${peso1}</aggregationcoef>
       <aggregationcoef2>0.00000</aggregationcoef2>
       <weightoverride>0</weightoverride>
-      <sortorder>3</sortorder>
+      <sortorder>500</sortorder>
       <display>0</display>
       <decimals>$@NULL@$</decimals>
       <hidden>0</hidden>
@@ -754,7 +754,7 @@ function buildGradebook(rootCatId, eadCatId, presencialCatId, courseItemId, eadI
   <grade_letters>
   </grade_letters>
   <grade_settings>
-    <grade_setting id="">
+    <grade_setting id="${rootCatId + 3000}">
       <name>minmaxtouse</name>
       <value>1</value>
     </grade_setting>
@@ -806,6 +806,33 @@ function buildActivityGradesXml(actId, categoryId, titulo, itemmodule, sortOrder
   <grade_letters>
   </grade_letters>
 </activity_gradebook>`;
+}
+
+/**
+ * Builds the references Moodle writes alongside an activity backup.
+ */
+function buildActivityInforef({ gradeItemId = null, fileIds = [], questionCategoryIds = [] } = {}) {
+  const sections = [];
+
+  if (fileIds.length) {
+    const files = fileIds
+      .map(id => `    <file>\n      <id>${id}</id>\n    </file>`)
+      .join('\n');
+    sections.push(`  <fileref>\n${files}\n  </fileref>`);
+  }
+
+  if (gradeItemId !== null && gradeItemId !== undefined) {
+    sections.push(`  <grade_itemref>\n    <grade_item>\n      <id>${gradeItemId}</id>\n    </grade_item>\n  </grade_itemref>`);
+  }
+
+  if (questionCategoryIds.length) {
+    const categories = questionCategoryIds
+      .map(id => `    <question_category>\n      <id>${id}</id>\n    </question_category>`)
+      .join('\n');
+    sections.push(`  <question_categoryref>\n${categories}\n  </question_categoryref>`);
+  }
+
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<inforef>\n${sections.join('\n')}\n</inforef>`;
 }
 
 // ── HTML Blocks ───────────────────────────────────────────────────────────────
@@ -897,6 +924,7 @@ module.exports = {
   buildAssignXml,
   buildGradebook,
   buildActivityGradesXml,
+  buildActivityInforef,
   buildBlockXml,
   buildAgendaHtml,
   buildCourseSummary,

@@ -26,6 +26,7 @@ Todo o processo de leitura, interpretação e estruturação do conteúdo é fei
 - **Extração inteligente** — lê a Matriz DE e identifica automaticamente nome, código, ementa, objetivos, cronograma, atividades e avaliações
 - **Suporte a quizzes** — importa arquivos de questões (`.docx`) e os associa às atividades corretas
 - **Suporte a tarefas** — anexa arquivos de tarefas às atividades de entrega
+- **Associação flexível de anexos** — reconhece `Tarefa 1`, `tarefa_1` e usa ordem alfabética quando não há número
 - **Editor de revisão** — visualize e edite o JSON extraído antes de gerar o pacote
 - **Builder manual** — crie a estrutura da disciplina do zero, sem precisar de documentos
 - **Geração completa de MBZ** — gera o XML compatível com o formato Moodle 2.x com seções, fóruns, quizzes, tarefas, wikis, glossários, chats e encontros

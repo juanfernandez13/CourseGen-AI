@@ -25,7 +25,8 @@ Siga EXATAMENTE este schema:
   },
   "ementa": "Texto completo da ementa",
   "mural": {
-    "descricao": "Transcreva INTEGRALMENTE o texto da seção '6. DESCRIÇÃO DO MURAL' (ou equivalente) do documento. Preserve todos os parágrafos separando-os com \\n\\n. Não resuma nem omita partes."
+    "titulo": "Título literal exibido na primeira linha do mural (ex: Progressões e Matemática Financeira / Polo)",
+    "descricao": "Somente a mensagem pedagógica principal do mural, iniciando em Seja bem-vindo(a)! e terminando antes de Bons estudos!. Preserve integralmente os parágrafos selecionados."
   },
   "aulas": [
     {
@@ -123,7 +124,9 @@ Esta regra se aplica a: aulas[].descricao, forum.descricao, tarefa.descricao, en
 
 Regras:
 - "aulas": extraia CADA aula/semana/tópico do cronograma como um item separado.
-- "mural.descricao": transcreva INTEGRALMENTE o conteúdo da seção '6. DESCRIÇÃO DO MURAL' (ou seção numerada equivalente). Separe parágrafos com \n\n. Nunca resuma.
+- "mural.titulo": extraia LITERALMENTE a primeira linha que funciona como título do mural. Preserve placeholders como "/ Polo"; não substitua "Polo" pelos polos da tabela de tutores.
+- "mural.descricao": extraia SOMENTE a mensagem pedagógica principal dentro da seção "DESCRIÇÃO DO MURAL". Quando existirem, comece em "Seja bem-vindo(a)!" e termine ANTES de "Bons estudos!". Dentro desses limites, transcreva integralmente, sem resumir ou parafrasear.
+- "mural.descricao": NÃO inclua o título do mural, vocativos anteriores à saudação (ex: "Caro(a) aluno(a),"), encerramentos (ex: "Bons estudos!") nem elementos fixos da interface Moodle como "Livro da disciplina", "PUD", "Biblioteca", "Fórum Tira dúvidas", "PROFESSORES(AS)", nomes de professor/tutor, "AGENDA", "NAVEGAÇÃO" e "ADMINISTRAÇÃO".
 - "forum": inclua SOMENTE se existir explicitamente na matriz um fórum de discussão para aquela aula (campo de atividade EaD específico). Se não existir, use null. Extraia as datas de início e fim do período de participação.
 - "forum.descricao": transcreva INTEGRALMENTE o enunciado/proposta do fórum como está na matriz. Inclua todas as orientações de participação. Nunca resuma.
 - "quiz": inclua quando houver questionário/avaliação online com prazo definido. Senão, use null.
@@ -135,7 +138,7 @@ Regras:
 - "aulas[].descricao": transcreva INTEGRALMENTE o texto de apresentação da aula como está na matriz. Nunca resuma nem crie texto que não existe no documento.
 - "apresentacao": transcreva INTEGRALMENTE o texto de apresentação/boas-vindas da disciplina. Nunca resuma.
 - "encontros[].descricao": transcreva INTEGRALMENTE a descrição das atividades do encontro. Nunca resuma.
-- "disciplina.polo": extraia o polo ou local de oferta da disciplina (ex: "Polo Fortaleza"). Use null se não encontrar.
+- "disciplina.polo": extraia apenas um polo/local de oferta explicitamente definido para A DISCIPLINA nos dados gerais. NUNCA use nem concatene os polos da tabela "INFORMAÇÕES DOS(AS) TUTORES(AS) A DISTÂNCIA". Se o documento listar somente polos de tutores ou vários polos nessa tabela, use null.
 - "professor.tutor": extraia o nome do(a) tutor(a) se estiver no documento. Use null se não encontrar.
 - "encontros": extraia a seção "DESCRIÇÃO DO(S) ENCONTRO(S) PRESENCIAL(IS) OU VIRTUAL(IS)" (geralmente seção 9). Cada encontro vira um item com: numero, titulo (completo com data), descricao (atividades), data (DD/MM/YYYY do encontro), turnos (1 ou 2, quantidade de turnos), avaliacao ("sem_nota" ou "nota_media"), peso (0 a 100, percentual), nota_titulo (campo "Nota -" da configuração), falta_titulo (campo "Falta -" da configuração). Use [] se não houver seção de encontros.
 - "avaliacao_final": extraia a avaliação final (AF). O título deve ser literalmente "[Disciplina] [Avaliação Final]". Sempre retorne este campo.
