@@ -1,11 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   putFile, removeFile, listMeta, hydrateFiles, clearAll, FileKind,
 } from './fileStore';
 
 type Persisted = { file: File; id: string };
+
+/** Aceita a lista pronta ou uma função sobre a lista atual, como os setters do
+ * React. A forma de função é a correta para remover: ela resolve contra o
+ * estado mais recente, não contra o que o componente viu no último render. */
+export type FilesUpdater = File[] | ((prev: File[]) => File[]);
 
 export type PersistedFiles = {
   hydrated:    boolean;
@@ -13,8 +18,8 @@ export type PersistedFiles = {
   quizFiles:   File[];
   tarefaFiles: File[];
   setMatrizFile:  (file: File | null) => Promise<void>;
-  setQuizFiles:   (files: File[]) => Promise<void>;
-  setTarefaFiles: (files: File[]) => Promise<void>;
+  setQuizFiles:   (next: FilesUpdater) => Promise<void>;
+  setTarefaFiles: (next: FilesUpdater) => Promise<void>;
   clearAllFiles:  () => Promise<void>;
 };
 
@@ -23,6 +28,37 @@ export function usePersistedFiles(): PersistedFiles {
   const [quizzes,  setQuizzes]  = useState<Persisted[]>([]);
   const [tarefas,  setTarefas]  = useState<Persisted[]>([]);
   const [hydrated, setHydrated] = useState(false);
+
+  /* Espelho síncrono do estado. As gravações no IndexedDB são assíncronas: sem
+   * isto, dois cliques seguidos no × resolvem a lista contra o render antigo e
+   * o arquivo removido no primeiro clique reaparece. */
+  const matrizRef  = useRef<Persisted | null>(null);
+  const quizzesRef = useRef<Persisted[]>([]);
+  const tarefasRef = useRef<Persisted[]>([]);
+
+  /* Serializa as operações para que duas chamadas não se intercalem no meio de
+   * um await e gravem entradas duplicadas. */
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+
+  function enqueue(task: () => Promise<void>): Promise<void> {
+    // Encadeia nos dois lados para que uma falha não trave a fila.
+    const run = queue.current.then(task, task);
+    queue.current = run.catch(() => undefined);
+    return run;
+  }
+
+  function commitMatriz(next: Persisted | null) {
+    matrizRef.current = next;
+    setMatriz(next);
+  }
+  function commitQuizzes(next: Persisted[]) {
+    quizzesRef.current = next;
+    setQuizzes(next);
+  }
+  function commitTarefas(next: Persisted[]) {
+    tarefasRef.current = next;
+    setTarefas(next);
+  }
 
   useEffect(() => {
     (async () => {
@@ -36,21 +72,15 @@ export function usePersistedFiles(): PersistedFiles {
         await removeFile(matrizPersisted[i].meta.id);
       }
 
-      if (latest) setMatriz({ file: latest.file, id: latest.meta.id });
-      setQuizzes(quizPersisted.map(x => ({ file: x.file, id: x.meta.id })));
-      setTarefas(tarefaPersisted.map(x => ({ file: x.file, id: x.meta.id })));
+      if (latest) commitMatriz({ file: latest.file, id: latest.meta.id });
+      commitQuizzes(quizPersisted.map(x => ({ file: x.file, id: x.meta.id })));
+      commitTarefas(tarefaPersisted.map(x => ({ file: x.file, id: x.meta.id })));
       setHydrated(true);
     })().catch(() => setHydrated(true));
   }, []);
 
-  async function setMatrizFile(file: File | null): Promise<void> {
-    if (matriz) await removeFile(matriz.id);
-    if (!file) {
-      setMatriz(null);
-      return;
-    }
-    const meta = await putFile(file, 'matriz');
-    setMatriz({ file, id: meta.id });
+  function resolveFiles(next: FilesUpdater, current: Persisted[]): File[] {
+    return typeof next === 'function' ? next(current.map(p => p.file)) : next;
   }
 
   async function syncList(
@@ -75,19 +105,40 @@ export function usePersistedFiles(): PersistedFiles {
     return result;
   }
 
-  async function setQuizFiles(next: File[]): Promise<void> {
-    setQuizzes(await syncList('quiz', quizzes, next));
+  function setMatrizFile(file: File | null): Promise<void> {
+    return enqueue(async () => {
+      const current = matrizRef.current;
+      if (current) await removeFile(current.id);
+      if (!file) {
+        commitMatriz(null);
+        return;
+      }
+      const meta = await putFile(file, 'matriz');
+      commitMatriz({ file, id: meta.id });
+    });
   }
 
-  async function setTarefaFiles(next: File[]): Promise<void> {
-    setTarefas(await syncList('tarefa', tarefas, next));
+  function setQuizFiles(next: FilesUpdater): Promise<void> {
+    return enqueue(async () => {
+      const current = quizzesRef.current;
+      commitQuizzes(await syncList('quiz', current, resolveFiles(next, current)));
+    });
   }
 
-  async function clearAllFiles(): Promise<void> {
-    await clearAll();
-    setMatriz(null);
-    setQuizzes([]);
-    setTarefas([]);
+  function setTarefaFiles(next: FilesUpdater): Promise<void> {
+    return enqueue(async () => {
+      const current = tarefasRef.current;
+      commitTarefas(await syncList('tarefa', current, resolveFiles(next, current)));
+    });
+  }
+
+  function clearAllFiles(): Promise<void> {
+    return enqueue(async () => {
+      await clearAll();
+      commitMatriz(null);
+      commitQuizzes([]);
+      commitTarefas([]);
+    });
   }
 
   return {

@@ -2,7 +2,9 @@
 
 import { useRef, useState, DragEvent, ChangeEvent } from 'react';
 import { extractJson, extractQuizzes } from '../lib/api';
+import type { FilesUpdater } from '../lib/usePersistedFiles';
 import FileViewer from './FileViewer';
+import CopyPromptButton from './CopyPromptButton';
 import type { useJsonHistory } from '../lib/useJsonHistory';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,8 +24,8 @@ type Props = {
   quizFiles: File[];
   tarefaFiles: File[];
   onMatrizChange: (f: File | null) => void;
-  onQuizzesChange: (files: File[]) => void;
-  onTarefasChange: (files: File[]) => void;
+  onQuizzesChange: (next: FilesUpdater) => void;
+  onTarefasChange: (next: FilesUpdater) => void;
   onExtracted: (json: string) => void;
   history?: ReturnType<typeof useJsonHistory>;
 };
@@ -260,19 +262,37 @@ export default function UploadStep({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <span className="font-mono-ui text-[10.5px] uppercase tracking-[0.06em]" style={{ color: 'var(--ink-3)' }}>
-          step 01 / upload
-        </span>
-        <h2
-          className="mt-1.5 text-[22px] font-semibold tracking-tight"
-          style={{ color: 'var(--text-1)', letterSpacing: '-0.4px' }}
-        >
-          Anexar documentos
-        </h2>
-        <p className="mt-1 text-[13px]" style={{ color: 'var(--text-2)' }}>
-          Matriz é obrigatória. Quizzes e tarefas, opcionais.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <span className="font-mono-ui text-[10.5px] uppercase tracking-[0.06em]" style={{ color: 'var(--ink-3)' }}>
+            step 01 / upload
+          </span>
+          <h2
+            className="mt-1.5 text-[22px] font-semibold tracking-tight"
+            style={{ color: 'var(--text-1)', letterSpacing: '-0.4px' }}
+          >
+            Anexar documentos
+          </h2>
+          <p className="mt-1 text-[13px]" style={{ color: 'var(--text-2)' }}>
+            Matriz é obrigatória. Quizzes e tarefas, opcionais.
+          </p>
+        </div>
+
+        {/* Atalho para quem prefere gerar o JSON em outra IA e colar na revisão. */}
+        <div className="flex flex-col items-end gap-1">
+          <CopyPromptButton
+            className="rounded-md px-2.5 py-1.5 text-[11.5px] transition-colors"
+            style={{
+              background: 'transparent',
+              color: 'var(--ink-2)',
+              border: '1px solid var(--line-2)',
+              fontFamily: 'var(--font-mono)',
+            }}
+          />
+          <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+            para gerar o JSON em outra IA
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -322,7 +342,7 @@ export default function UploadStep({
           <DropZone
             accept=".docx"
             multiple
-            onAdd={f => onQuizzesChange([...quizFiles, ...f])}
+            onAdd={f => onQuizzesChange(prev => [...prev, ...f])}
             dragging={dragQuiz}
             setDragging={setDragQuiz}
             compact={quizFiles.length > 0}
@@ -331,7 +351,7 @@ export default function UploadStep({
             <div className="flex flex-col gap-1.5 mt-1">
               {quizFiles.map((f, i) => (
                 <FileChip key={`${f.name}-${i}`} name={f.name} badge={`Q${i + 1}`}
-                  onRemove={() => onQuizzesChange(quizFiles.filter((_, idx) => idx !== i))}
+                  onRemove={() => onQuizzesChange(prev => prev.filter((_, idx) => idx !== i))}
                   onView={() => setViewFile(f)} />
               ))}
             </div>
@@ -353,7 +373,7 @@ export default function UploadStep({
           <DropZone
             accept=".docx,.doc,.pdf,.xlsx,.xls,.ppt,.pptx"
             multiple
-            onAdd={f => onTarefasChange([...tarefaFiles, ...f])}
+            onAdd={f => onTarefasChange(prev => [...prev, ...f])}
             dragging={dragTarefa}
             setDragging={setDragTarefa}
             compact={tarefaFiles.length > 0}
@@ -362,7 +382,7 @@ export default function UploadStep({
             <div className="flex flex-col gap-1.5 mt-1">
               {tarefaFiles.map((f, i) => (
                 <FileChip key={`${f.name}-${i}`} name={f.name}
-                  onRemove={() => onTarefasChange(tarefaFiles.filter((_, idx) => idx !== i))}
+                  onRemove={() => onTarefasChange(prev => prev.filter((_, idx) => idx !== i))}
                   onView={() => setViewFile(f)} />
               ))}
             </div>

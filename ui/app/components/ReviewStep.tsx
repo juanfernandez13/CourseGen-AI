@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import FileViewer from './FileViewer';
-import CopyPromptButton from './CopyPromptButton';
 import type { useJsonHistory } from '../lib/useJsonHistory';
+import type { FilesUpdater } from '../lib/usePersistedFiles';
 import { mapTaskFiles } from '../../server/taskFileMapper';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
@@ -666,7 +666,7 @@ type Props = {
   loading: boolean;
   error: string | null;
   tarefaFiles: File[];
-  onTarefaFilesChange?: (files: File[]) => void;
+  onTarefaFilesChange?: (next: FilesUpdater) => void;
   history?: ReturnType<typeof useJsonHistory>;
   onRestore?: (json: string) => void;
 };
@@ -680,11 +680,11 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
   const hasHistory = history && history.versions.length > 0;
 
   function handleAttach(novos: File[]) {
-    onTarefaFilesChange?.([...tarefaFiles, ...novos]);
+    onTarefaFilesChange?.(prev => [...prev, ...novos]);
   }
 
   function handleDetach(alvo: File) {
-    onTarefaFilesChange?.(tarefaFiles.filter(f => f !== alvo));
+    onTarefaFilesChange?.(prev => prev.filter(f => f !== alvo));
   }
 
   return (
@@ -724,15 +724,6 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
               versões · {history!.versions.length}
             </button>
           )}
-          <CopyPromptButton
-            className="rounded-md px-2.5 py-1.5 text-[11.5px] transition-colors"
-            style={{
-              background: 'transparent',
-              color: 'var(--ink-2)',
-              border: '1px solid var(--line-2)',
-              fontFamily: 'var(--font-mono)',
-            }}
-          />
           <div
             className="flex overflow-hidden rounded-md"
             style={{ border: '1px solid var(--line-2)', background: 'var(--surface-2)' }}
