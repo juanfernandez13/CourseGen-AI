@@ -1,0 +1,221 @@
+{
+  "disciplina": {
+    "nome": "Laboratório de Ensino de Matemática",
+    "codigo": null,
+    "carga_horaria": "80 h",
+    "curso": "Licenciatura em Matemática",
+    "semestre": "2º",
+    "turma": null,
+    "polo": null
+  },
+  "professor": {
+    "nome": "Wellington Lucio Bezerra",
+    "email": "wellingtonlucio@ifce.edu.br",
+    "titulacao": null,
+    "tutor": null
+  },
+  "ementa": "As potencialidades didático-pedagógicas do Laboratório de Ensino de Matemática (LEM); Laboratório de ensino de matemática e materiais didáticos manipuláveis; Materiais manipuláveis como recursos didáticos na formação de professores de matemática; O LEM e a mediação das novas tecnologias; As atividades de pesquisa em educação matemática como apoio à formação docente",
+  "mural": {
+    "descricao": "Seja bem-vindo à disciplina de Laboratório de Ensino de Matemática.\nNesta disciplina, exploraremos o Laboratório de Ensino de Matemática (LEM), analisando o que esse espaço representa para o ensino de Matemática e como o professor pode estruturá-lo na escola, transformando-o em um ambiente de grande potencial para a aprendizagem.\n\nLivro da disciplina\n\nPUD da disciplina\n\nBiblioteca\n\nPROFESSORES(AS)\n\nNOME \nTUTOR(A) A DISTÂNCIA\n\nNOME \nPROF. FORMADOR(A)\n\nAGENDA\n\nNAVEGAÇÃO\n\nADMINISTRAÇÃO",
+    "titulo": "Laboratório de Ensino de Matemática / Polo"
+  },
+  "aulas": [
+    {
+      "numero": 1,
+      "titulo": "O laboratório de ensino de matemática e suas potencialidades didático-pedagógicas",
+      "descricao": "Olá, aluno(a)!\n\nNesta aula, exploraremos o Laboratório de Ensino de Matemática (LEM) e como as diferentes concepções sobre o LEM podem influenciar o professor na escolha e na execução de atividades voltadas ao ensino e à aprendizagem da Matemática. Para complementar esse estudo, compreenderemos por que o público-alvo do LEM deve ser um fator determinante tanto para sua estruturação física quanto para a escolha de seus elementos concretos — materiais e instrumentos de aprendizagem.",
+      "data_inicio": "10/04/2026",
+      "data_fim": "19/04/2026",
+      "forum": {
+        "titulo": "[Aula 1] [Fórum 1] O LEM e suas potencialidades didático-pedagógicas [5]",
+        "nota": 5,
+        "descricao": "Na Aula 1, exploramos as concepções do LEM e suas potencialidades, bem como sua dimensão estrutural. É importante destacar que as concepções que o professor de Matemática e a escola possuem sobre o LEM influenciam diretamente a forma como ele será implantado e utilizado como espaço de aprendizagem dessa disciplina.\n\nComo parte da atividade, comente cada concepção apresentada, incluindo exemplos práticos de posicionamento docente relacionados a essas concepções.\n\nOrientações para o fórum:\nParticipe pelo menos duas vezes.\nPrimeira participação: responda aos questionamentos propostos no enunciado da atividade.\nSegunda participação: complemente, pergunte ou contra-argumente com base na participação de seus colegas e/ou professor(a).",
+        "data_inicio": "10/04/2026",
+        "data_fim": "19/04/2026"
+      },
+      "quiz": {
+        "titulo": "[Aula 1] [Questionário 1] Concepções do LEM [10]",
+        "nota": 10,
+        "data_inicio": "10/04/2026",
+        "data_fim": "19/04/2026",
+        "questoes": [
+          {
+            "numero": 1,
+            "tipo": "multipla_escolha",
+            "enunciado": "Qual das alternativas a seguir melhor descreve o conceito de Laboratório de Ensino de Matemática (LEM)?",
+            "pontuacao": 2.5,
+            "itens": [
+              {
+                "texto": "Um espaço exclusivo para aplicação de provas de Matemática.",
+                "isCorrect": false
+              },
+              {
+                "texto": "Um ambiente que potencializa o ensino e a aprendizagem da Matemática por meio de materiais concretos e atividades práticas.",
+                "isCorrect": true
+              },
+              {
+                "texto": "Uma sala de informática destinada apenas ao uso de softwares educacionais.",
+                "isCorrect": false
+              },
+              {
+                "texto": "Um depósito de materiais didáticos sem função pedagógica definida.",
+                "isCorrect": false
+              }
+            ]
+          },
+          {
+            "numero": 2,
+            "tipo": "multipla_escolha",
+            "enunciado": "Segundo Lorenzato, qual é o principal objetivo do LEM?",
+            "pontuacao": 2.5,
+            "itens": [
+              {
+                "texto": "Substituir completamente as aulas expositivas tradicionais.",
+                "isCorrect": false
+              },
+              {
+                "texto": "Armazenar livros e cadernos dos alunos.",
+                "isCorrect": false
+              },
+              {
+                "texto": "Proporcionar um ambiente que favoreça a construção do conhecimento matemático de forma ativa.",
+                "isCorrect": true
+              },
+              {
+                "texto": "Servir apenas como espaço de recreação para os alunos.",
+                "isCorrect": false
+              }
+            ]
+          },
+          {
+            "numero": 3,
+            "tipo": "associativa",
+            "enunciado": "Associe cada concepção do LEM à sua descrição correspondente:",
+            "pontuacao": 2.5,
+            "itens": [
+              {
+                "texto": "LEM como depósito",
+                "resposta": "Espaço para guardar materiais sem uso pedagógico planejado"
+              },
+              {
+                "texto": "LEM como sala de aula alternativa",
+                "resposta": "Ambiente para aulas diferenciadas com recursos manipuláveis"
+              },
+              {
+                "texto": "LEM como laboratório de experimentação",
+                "resposta": "Espaço para investigação e construção do conhecimento matemático"
+              }
+            ]
+          },
+          {
+            "numero": 4,
+            "tipo": "dissertativa",
+            "enunciado": "Explique, com suas palavras, como a concepção que o professor possui sobre o LEM influencia a forma como ele utiliza esse espaço em suas práticas pedagógicas.",
+            "pontuacao": 2.5,
+            "feedback": "Considere as diferentes concepções apresentadas por Lorenzato e exemplifique."
+          }
+        ]
+      },
+      "wiki": null,
+      "glossario": null,
+      "chat": null,
+      "tarefa": {
+        "titulo": "[Aula 1] [Tarefa 1] Concepções elencadas por Lorenzato [10]",
+        "nota": 10,
+        "descricao": "Clique no link Aula 1 – Tarefa 1, faça o download do arquivo. Responda às questões propostas e depois deposite sua atividade neste espaço.",
+        "data_inicio": "10/04/2026",
+        "data_fim": "19/04/2026",
+        "arquivos": [
+          {
+            "filename": "tarefa_1.docx",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_1.docx"
+          },
+          {
+            "filename": "tarefa_1.pdf",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_1.pdf"
+          }
+        ]
+      }
+    },
+    {
+      "numero": 3,
+      "titulo": "LEM: novas tecnologias e modelagem matemática para o ensino de álgebra e geometria",
+      "descricao": "Caro(a) aluno(a),\n\nNa Aula 3, exploraremos como diferentes tecnologias, como softwares e dobraduras, podem auxiliar no processo de ensino-aprendizagem da Matemática. Também discutiremos o papel da calculadora como uma ferramenta para potencializar a participação e a aprendizagem dos alunos nas aulas de Matemática.\n\nAlém disso, estudaremos como a modelagem matemática, em conjunto com softwares dinâmicos, pode contribuir para uma aprendizagem mais contextualizada, focada na aplicação da Matemática em situações do cotidiano e na resolução de problemas.\n\nEstamos certos de que esse estudo trará novas perspectivas e ferramentas práticas para enriquecer suas aulas de Matemática.",
+      "data_inicio": "26/04/2026",
+      "data_fim": "03/05/2026",
+      "forum": {
+        "titulo": "[Aula 3] [Fórum 3] Novas tecnologias e modelagem matemática [5]",
+        "nota": 5,
+        "descricao": "Nesta aula, discutimos a importância do LEM: novas tecnologias e modelagem matemática para o ensino de álgebra e geometria. Como atividade, realize uma pesquisa sobre o uso da modelagem matemática no processo de ensino e aprendizagem.\n\nOrientações para o fórum:\nParticipação mínima: duas contribuições.\nPrimeira participação: responda aos questionamentos propostos no enunciado da atividade, apresentando sua pesquisa e exemplo.\nSegunda participação: complemente, pergunte ou contra-argumente com base nas participações dos seus colegas e/ou professor(a).",
+        "data_inicio": "26/04/2026",
+        "data_fim": "03/05/2026"
+      },
+      "quiz": null,
+      "wiki": null,
+      "glossario": {
+        "titulo": "[Aula 3] [Glossário] Tecnologias e Modelagem Matemática",
+        "nota": 10,
+        "descricao": "Construa um glossário colaborativo com os principais termos e conceitos abordados nesta aula. Cada aluno deve contribuir com pelo menos 2 termos, incluindo definição e um exemplo de aplicação no contexto do ensino de matemática.\n\nSugestões de termos: Modelagem Matemática, GeoGebra, Software Dinâmico, Geometria Interativa, Calculadora Científica, Dobraduras em Geometria, Álgebra Visual.",
+        "data_inicio": "26/04/2026",
+        "data_fim": "03/05/2026"
+      },
+      "chat": null,
+      "tarefa": {
+        "titulo": "[Aula 3] [Tarefa 3] LEM: novas tecnologias e modelagem matemática para o ensino de álgebra e geometria [10]",
+        "nota": 10,
+        "descricao": "Clique no link Aula 3 – Tarefa 3, faça o download do arquivo. Responda às questões propostas e depois deposite sua atividade neste espaço.",
+        "data_inicio": "26/04/2026",
+        "data_fim": "03/05/2026",
+        "arquivos": [
+          {
+            "filename": "tarefa_3.docx",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_3.docx"
+          },
+          {
+            "filename": "tarefa_3.pdf",
+            "filePath": "/home/juan/Downloads/files/tarefas/tarefa_3.pdf"
+          }
+        ]
+      }
+    }
+  ],
+  "apresentacao": "Caro(a) aluno(a),\n\nSeja bem-vindo à disciplina de Laboratório de Ensino de Matemática.\nNesta disciplina, exploraremos o Laboratório de Ensino de Matemática (LEM), analisando o que esse espaço representa para o ensino de Matemática e como o professor pode estruturá-lo na escola, transformando-o em um ambiente de grande potencial para a aprendizagem.",
+  "encontros": [
+    {
+      "numero": 1,
+      "titulo": "1º Encontro VIRTUAL (NOITE 19h às 21h - quarta-feira) - 15/04/2025",
+      "descricao": "Neste encontro, será compartilhado com os estudantes a apresentação da equipe, da metodologia do curso, dos acordos pedagógicos e, por fim, do conteúdo programático das aulas 1, 2 e 3, como também aproveitará o momento da aula para tirar dúvidas referente aos conteúdos e atividades da Aula 1.\n\nOrientações e início da atividade da PCC.",
+      "data": "15/04/2025",
+      "turnos": 1,
+      "avaliacao": "sem_nota",
+      "peso": 0,
+      "nota_titulo": "[Encontro Presencial] [Avaliação y] [ ]",
+      "falta_titulo": "[Encontro Presencial X] [Faltas] [1]"
+    }
+  ],
+  "avaliacao_final": {
+    "titulo": "[Disciplina] [Avaliação Final]",
+    "descricao": "Avaliação final da disciplina.",
+    "data": "22/06/2026"
+  },
+  "frequencia": {
+    "percentual_minimo": 75,
+    "observacoes": "mínimo de 75% de presença exigido"
+  },
+  "livro_de_notas": {
+    "categorias": [
+      {
+        "nome": "Atividades a distância",
+        "peso": 40
+      },
+      {
+        "nome": "Atividades presenciais",
+        "peso": 60
+      }
+    ]
+  },
+  "bibliografia": {
+    "basica": [],
+    "complementar": []
+  }
+}

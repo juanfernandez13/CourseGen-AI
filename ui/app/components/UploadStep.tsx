@@ -271,7 +271,7 @@ export default function UploadStep({
           Anexar documentos
         </h2>
         <p className="mt-1 text-[13px]" style={{ color: 'var(--text-2)' }}>
-          Matriz é obrigatória. Quizzes e tarefas, opcionais. Tamanho máximo 20 MB por arquivo.
+          Matriz é obrigatória. Quizzes e tarefas, opcionais.
         </p>
       </div>
 

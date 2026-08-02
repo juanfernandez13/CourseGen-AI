@@ -45,3 +45,33 @@ test('fallback alfabético não sobrescreve números explícitos', () => {
   assert.equal(mapped[2][0].name, 'Tarefa 2_Declarada.pdf');
   assert.equal(mapped[3][0].name, 'Terceira sem número.pdf');
 });
+
+/* O anexo por bloco (ReviewStep) grava a escolha como prefixo "tarefa_N__".
+ * Estes testes fixam esse contrato entre a UI e o mapper. */
+
+test('prefixo tarefa_N__ da associação explícita resolve para N', () => {
+  const mapped = mapTaskFiles([
+    { name: 'tarefa_3__Trabalho final.pdf' },
+    { name: 'tarefa_1__Estudo de caso.docx' },
+  ]);
+
+  assert.equal(mapped[1][0].name, 'tarefa_1__Estudo de caso.docx');
+  assert.equal(mapped[3][0].name, 'tarefa_3__Trabalho final.pdf');
+});
+
+test('prefixo explícito vence número que já existia no nome original', () => {
+  const mapped = mapTaskFiles([{ name: 'tarefa_2__Tarefa 7 revisada.pdf' }]);
+
+  assert.equal(mapped[2].length, 1);
+  assert.equal(mapped[7], undefined);
+});
+
+test('arquivos anexados por bloco convivem com os enviados em lote', () => {
+  const mapped = mapTaskFiles([
+    { name: 'tarefa_2__Anexado no bloco.pdf' },
+    { name: 'Sem numero.pdf' },
+  ]);
+
+  assert.equal(mapped[1][0].name, 'Sem numero.pdf');
+  assert.equal(mapped[2][0].name, 'tarefa_2__Anexado no bloco.pdf');
+});

@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider, ThemeToggle } from './components/ThemeProvider';
 import SettingsButton from './components/SettingsButton';
-import VersionToggle from './components/VersionToggle';
 
 export const metadata: Metadata = {
   title: 'CourseGen AI',
@@ -44,7 +43,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="text-[13px] font-semibold tracking-tight" style={{ color: 'var(--header-text)' }}>
                 CourseGen
               </span>
-              <VersionToggle />
             </div>
 
             {/* Nav links (purely visual; single page app) */}

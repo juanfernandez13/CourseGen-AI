@@ -8,32 +8,67 @@ import {
   extractDataWithGemini,
   extractAllQuizzes,
 } from '../../../server/extractor';
+import { discardBlobs, downloadToTmp, isRemoteFile, type RemoteFile } from '../../../server/blobStore';
 
 export const runtime = 'nodejs';
 // Vercel Hobby with Fluid Compute supports up to 300 seconds.
 export const maxDuration = 300;
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
-
 function getApiKey(req: NextRequest): string | null {
   return req.headers.get('x-gemini-key')?.trim() || process.env.GEMINI_KEY?.trim() || null;
 }
 
-function assertValidDoc(file: File) {
-  if (file.size > MAX_FILE_SIZE) {
-    throw new Error(`${file.name}: o limite é 20 MB por arquivo.`);
-  }
-  if (!file.name.toLowerCase().endsWith('.docx')) {
-    throw new Error(`${file.name}: apenas arquivos .docx são suportados para extração.`);
+function assertDocx(name: string) {
+  if (!name.toLowerCase().endsWith('.docx')) {
+    throw new Error(`${name}: apenas arquivos .docx são suportados para extração.`);
   }
 }
 
 async function persistUpload(file: File, prefix: string): Promise<string> {
-  assertValidDoc(file);
+  assertDocx(file.name);
   const safeName = path.basename(file.name).replace(/[^a-zA-Z0-9._-]/g, '_');
   const filePath = path.join(os.tmpdir(), `${prefix}_${crypto.randomUUID()}_${safeName}`);
   fs.writeFileSync(filePath, Buffer.from(await file.arrayBuffer()));
   return filePath;
+}
+
+type Inputs = {
+  matrizPath: string | null;
+  quizPaths: string[];
+  /** URLs a apagar do storage depois do processamento. */
+  blobUrls: string[];
+};
+
+/** Uploads chegam como URLs do Blob (Vercel) ou como o arquivo em si (local). */
+async function collectInputs(req: NextRequest): Promise<Inputs> {
+  const isJson = req.headers.get('content-type')?.includes('application/json');
+  if (!isJson) return collectFromFormData(req);
+
+  const body = await req.json();
+  const matriz = isRemoteFile(body?.matriz) ? (body.matriz as RemoteFile) : null;
+  const quizzes = Array.isArray(body?.quizzes) ? body.quizzes.filter(isRemoteFile) : [];
+
+  const blobUrls = [...(matriz ? [matriz.url] : []), ...quizzes.map((q: RemoteFile) => q.url)];
+  if (matriz) assertDocx(matriz.name);
+  for (const quiz of quizzes) assertDocx(quiz.name);
+
+  return {
+    matrizPath: matriz ? await downloadToTmp(matriz, 'matriz') : null,
+    quizPaths: await Promise.all(quizzes.map((q: RemoteFile) => downloadToTmp(q, 'quiz'))),
+    blobUrls,
+  };
+}
+
+async function collectFromFormData(req: NextRequest): Promise<Inputs> {
+  const formData = await req.formData();
+  const matriz = formData.get('matriz');
+  const quizzes = formData.getAll('quizzes').filter((entry): entry is File => entry instanceof File);
+
+  return {
+    matrizPath: matriz instanceof File ? await persistUpload(matriz, 'matriz') : null,
+    quizPaths: await Promise.all(quizzes.map(quiz => persistUpload(quiz, 'quiz'))),
+    blobUrls: [],
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -45,24 +80,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const temporaryFiles: string[] = [];
+  let inputs: Inputs = { matrizPath: null, quizPaths: [], blobUrls: [] };
   try {
-    const formData = await req.formData();
-    const matriz = formData.get('matriz');
-    const quizzes = formData.getAll('quizzes').filter((entry): entry is File => entry instanceof File);
+    inputs = await collectInputs(req);
+    const { matrizPath, quizPaths } = inputs;
 
-    let matrizPath: string | null = null;
-    if (matriz instanceof File) {
-      matrizPath = await persistUpload(matriz, 'matriz');
-      temporaryFiles.push(matrizPath);
-    }
-
-    const quizPaths: string[] = [];
-    for (const quiz of quizzes) {
-      const quizPath = await persistUpload(quiz, 'quiz');
-      temporaryFiles.push(quizPath);
-      quizPaths.push(quizPath);
-    }
     // Matriz e quizzes são independentes: execute as chamadas ao Gemini em paralelo.
     const matrizPromise: Promise<Record<string, unknown> | null> = matrizPath
       ? processMatriz(matrizPath).then(text => extractDataWithGemini(text, apiKey))
@@ -106,13 +128,14 @@ export async function POST(req: NextRequest) {
       ? 'O limite de uso do Gemini foi atingido. Tente novamente mais tarde.'
       : rawMessage.includes('API key') || rawMessage.includes('401') || rawMessage.includes('403')
         ? 'A chave do Gemini é inválida ou não tem permissão para usar o modelo.'
-        : rawMessage.startsWith('Arquivo') || rawMessage.includes('20 MB') || rawMessage.includes('.docx')
+        : rawMessage.includes('.docx') || rawMessage.includes('storage')
           ? rawMessage
           : 'Não foi possível extrair os documentos com o Gemini.';
     return NextResponse.json({ error: message }, { status: 500 });
   } finally {
-    for (const filePath of temporaryFiles) {
-      fs.rmSync(filePath, { force: true });
+    for (const filePath of [inputs.matrizPath, ...inputs.quizPaths]) {
+      if (filePath) fs.rmSync(filePath, { force: true });
     }
+    await discardBlobs(inputs.blobUrls);
   }
 }

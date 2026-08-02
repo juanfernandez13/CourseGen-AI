@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import FileViewer from './FileViewer';
+import CopyPromptButton from './CopyPromptButton';
 import type { useJsonHistory } from '../lib/useJsonHistory';
 import { mapTaskFiles } from '../../server/taskFileMapper';
 
@@ -24,6 +25,23 @@ type MatrizData = {
   professor?:  { nome?: string; email?: string; titulacao?: string; tutor?: string };
   aulas?: Aula[];
 };
+
+/* ─── Associação explícita de tarefa ─────────────────────────────────────────
+ * Anexar um arquivo a um bloco grava a escolha no próprio nome, seguindo a
+ * convenção "tarefa_N" que o taskFileMapper já resolve. Assim a associação
+ * sobrevive à persistência em IndexedDB, ao upload para o Blob e ao FormData,
+ * sem criar um segundo mecanismo em paralelo ao do servidor. */
+const TAREFA_PREFIX = /^tarefa[\s_-]*\d+__/i;
+
+function assignToTarefa(file: File, numero: number): File {
+  const original = file.name.replace(TAREFA_PREFIX, '');
+  return new File([file], `tarefa_${numero}__${original}`, { type: file.type });
+}
+
+/** Nome sem o prefixo técnico, para exibição. */
+function displayName(file: File): string {
+  return file.name.replace(TAREFA_PREFIX, '');
+}
 
 function parseJsonSafe(raw: string): { data: MatrizData | null; error: string | null } {
   try   { return { data: JSON.parse(raw) as MatrizData, error: null }; }
@@ -165,7 +183,47 @@ function QuizAccordion({ questoes }: { questoes: Questao[] }) {
 }
 
 /* ─── Aula Modal ─────────────────────────────────────────────────────────── */
-function AulaModal({ aula, tarefaFiles, onClose }: { aula: Aula; tarefaFiles: File[]; onClose: () => void }) {
+function AnexarTarefaButton({ tarefaNumero, onAttach, label }: {
+  tarefaNumero: number;
+  onAttach: (files: File[]) => void;
+  label: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <button
+        onClick={() => inputRef.current?.click()}
+        className="rounded-md px-2 py-0.5 text-xs font-medium transition-all shrink-0"
+        style={{ background: 'var(--tarefa-dim)', color: 'var(--tarefa)', border: '1px solid var(--tarefa-border)' }}
+      >
+        {label}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept=".docx,.doc,.pdf,.xlsx,.pptx"
+        hidden
+        onChange={e => {
+          const picked = Array.from(e.target.files ?? []);
+          if (picked.length) onAttach(picked.map(f => assignToTarefa(f, tarefaNumero)));
+          e.target.value = '';
+        }}
+      />
+    </>
+  );
+}
+
+type TarefaAnexoProps = {
+  /** Posição da tarefa na contagem global — é o que o servidor usa. */
+  tarefaNumero: number;
+  onAttach: (files: File[]) => void;
+  onDetach: (file: File) => void;
+};
+
+function AulaModal({ aula, tarefaFiles, onClose, tarefaNumero, onAttach, onDetach }: {
+  aula: Aula; tarefaFiles: File[]; onClose: () => void;
+} & TarefaAnexoProps) {
   const [viewFile, setViewFile] = useState<File | null>(null);
   const [visible, setVisible] = useState(false);
   const questoes = aula.quiz?.questoes ?? [];
@@ -301,9 +359,12 @@ function AulaModal({ aula, tarefaFiles, onClose }: { aula: Aula; tarefaFiles: Fi
                   {/* Uploaded files (client-side File objects) */}
                   {tarefaFiles.length > 0 ? (
                     <div className="flex flex-col gap-1.5">
-                      <span className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>
-                        {tarefaFiles.length} arquivo(s) anexado(s)
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>
+                          {tarefaFiles.length} arquivo(s) anexado(s)
+                        </span>
+                        <AnexarTarefaButton tarefaNumero={tarefaNumero} onAttach={onAttach} label="+ anexar" />
+                      </div>
                       {tarefaFiles.map((f, fi) => {
                         const isPdf  = /\.pdf$/i.test(f.name);
                         const isDocx = /\.docx?$/i.test(f.name);
@@ -317,10 +378,18 @@ function AulaModal({ aula, tarefaFiles, onClose }: { aula: Aula; tarefaFiles: Fi
                               <polyline points="14,2 14,8 20,8"
                                 stroke={isPdf ? 'var(--error)' : 'var(--tarefa)'} strokeWidth="1.5" strokeLinecap="round" />
                             </svg>
-                            <span className="flex-1 truncate" style={{ color: 'var(--text-2)' }} title={f.name}>{f.name}</span>
+                            <span className="flex-1 truncate" style={{ color: 'var(--text-2)' }} title={displayName(f)}>{displayName(f)}</span>
                             <span className="text-xs" style={{ color: 'var(--text-4)' }}>
                               {(f.size / 1024).toFixed(0)} KB
                             </span>
+                            <button
+                              onClick={() => onDetach(f)}
+                              title="Remover este arquivo da tarefa"
+                              className="rounded-md px-1.5 py-0.5 text-xs transition-all"
+                              style={{ color: 'var(--text-4)', border: '1px solid var(--border)' }}
+                            >
+                              ✕
+                            </button>
                             {canPreview && (
                               <button
                                 onClick={() => setViewFile(f)}
@@ -346,7 +415,8 @@ function AulaModal({ aula, tarefaFiles, onClose }: { aula: Aula; tarefaFiles: Fi
                         <line x1="12" y1="8" x2="12" y2="12" stroke="var(--tarefa)" strokeWidth="2" strokeLinecap="round" />
                         <circle cx="12" cy="16" r="1" fill="var(--tarefa)" />
                       </svg>
-                      Nenhum arquivo carregado para esta tarefa.
+                      <span className="flex-1">Nenhum arquivo carregado para esta tarefa.</span>
+                      <AnexarTarefaButton tarefaNumero={tarefaNumero} onAttach={onAttach} label="anexar arquivo" />
                     </div>
                   )}
                 </div>
@@ -389,7 +459,9 @@ function AulaModal({ aula, tarefaFiles, onClose }: { aula: Aula; tarefaFiles: Fi
 }
 
 /* ─── Aula Card ──────────────────────────────────────────────────────────── */
-function AulaCard({ aula, tarefaFiles }: { aula: Aula; tarefaFiles: File[] }) {
+function AulaCard({ aula, tarefaFiles, tarefaNumero, onAttach, onDetach }: {
+  aula: Aula; tarefaFiles: File[];
+} & TarefaAnexoProps) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -434,24 +506,36 @@ function AulaCard({ aula, tarefaFiles }: { aula: Aula; tarefaFiles: File[] }) {
       </button>
 
       {open && (
-        <AulaModal aula={aula} tarefaFiles={tarefaFiles} onClose={() => setOpen(false)} />
+        <AulaModal
+          aula={aula}
+          tarefaFiles={tarefaFiles}
+          onClose={() => setOpen(false)}
+          tarefaNumero={tarefaNumero}
+          onAttach={onAttach}
+          onDetach={onDetach}
+        />
       )}
     </>
   );
 }
 
 /* ─── Visual View ────────────────────────────────────────────────────────── */
-function VisualView({ data, tarefaMap }: { data: MatrizData; tarefaMap: Record<number, File[]> }) {
+function VisualView({ data, tarefaMap, onAttach, onDetach }: {
+  data: MatrizData;
+  tarefaMap: Record<number, File[]>;
+  onAttach: (files: File[]) => void;
+  onDetach: (file: File) => void;
+}) {
   const aulas = data.aulas ?? [];
 
   // Assign tarefa files to each aula by count order (same logic as server.js)
   let tarefaCounter = 0;
-  const aulaFiles: File[][] = aulas.map(aula => {
+  const aulaTarefa: { numero: number; files: File[] }[] = aulas.map(aula => {
     if (aula.tarefa) {
       tarefaCounter++;
-      return tarefaMap[tarefaCounter] ?? [];
+      return { numero: tarefaCounter, files: tarefaMap[tarefaCounter] ?? [] };
     }
-    return [];
+    return { numero: 0, files: [] };
   });
 
   return (
@@ -519,7 +603,14 @@ function VisualView({ data, tarefaMap }: { data: MatrizData; tarefaMap: Record<n
       ) : (
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))' }}>
           {aulas.map((aula, i) => (
-            <AulaCard key={i} aula={aula} tarefaFiles={aulaFiles[i]} />
+            <AulaCard
+              key={i}
+              aula={aula}
+              tarefaFiles={aulaTarefa[i].files}
+              tarefaNumero={aulaTarefa[i].numero}
+              onAttach={onAttach}
+              onDetach={onDetach}
+            />
           ))}
         </div>
       )}
@@ -575,17 +666,26 @@ type Props = {
   loading: boolean;
   error: string | null;
   tarefaFiles: File[];
+  onTarefaFilesChange?: (files: File[]) => void;
   history?: ReturnType<typeof useJsonHistory>;
   onRestore?: (json: string) => void;
 };
 
-export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loading, error, tarefaFiles, history, onRestore }: Props) {
+export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loading, error, tarefaFiles, onTarefaFilesChange, history, onRestore }: Props) {
   const [view, setView] = useState<'visual' | 'json'>('visual');
   const [showHistory, setShowHistory] = useState(false);
   const { data, error: parseError } = parseJsonSafe(json);
   const canGenerate = !parseError && !loading;
   const tarefaMap = mapTaskFiles(tarefaFiles);
   const hasHistory = history && history.versions.length > 0;
+
+  function handleAttach(novos: File[]) {
+    onTarefaFilesChange?.([...tarefaFiles, ...novos]);
+  }
+
+  function handleDetach(alvo: File) {
+    onTarefaFilesChange?.(tarefaFiles.filter(f => f !== alvo));
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -624,6 +724,15 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
               versões · {history!.versions.length}
             </button>
           )}
+          <CopyPromptButton
+            className="rounded-md px-2.5 py-1.5 text-[11.5px] transition-colors"
+            style={{
+              background: 'transparent',
+              color: 'var(--ink-2)',
+              border: '1px solid var(--line-2)',
+              fontFamily: 'var(--font-mono)',
+            }}
+          />
           <div
             className="flex overflow-hidden rounded-md"
             style={{ border: '1px solid var(--line-2)', background: 'var(--surface-2)' }}
@@ -697,7 +806,9 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
       </div>
 
       {/* Content */}
-      {view === 'visual' && data  && <VisualView data={data} tarefaMap={tarefaMap} />}
+      {view === 'visual' && data  && (
+        <VisualView data={data} tarefaMap={tarefaMap} onAttach={handleAttach} onDetach={handleDetach} />
+      )}
       {view === 'visual' && !data && (
         <div className="flex flex-col items-center justify-center py-20 rounded-xl"
           style={{ background: 'var(--error-dim)', border: '1px solid var(--error-border)' }}>

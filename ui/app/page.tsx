@@ -134,6 +134,7 @@ export default function Home() {
             loading={loading}
             error={error}
             tarefaFiles={tarefaFiles}
+            onTarefaFilesChange={setTarefaFiles}
             history={history}
             onRestore={handleRestore}
           />
