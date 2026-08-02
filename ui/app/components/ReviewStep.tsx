@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import FileViewer from './FileViewer';
-import GradebookEditor, { CATEGORIAS_PADRAO, type CategoriaNota } from './GradebookEditor';
+import GradebookEditor, { normalizarCategorias, type CategoriaNota } from './GradebookEditor';
 import type { useJsonHistory } from '../lib/useJsonHistory';
 import type { FilesUpdater } from '../lib/usePersistedFiles';
 import { mapTaskFiles } from '../../server/taskFileMapper';
@@ -623,9 +623,7 @@ function VisualView({ data, tarefaMap, onAttach, onDetach, onMove, onCategoriasC
       </div>
 
       <GradebookEditor
-        categorias={data.livro_de_notas?.categorias?.length
-          ? data.livro_de_notas.categorias
-          : CATEGORIAS_PADRAO}
+        categorias={normalizarCategorias(data.livro_de_notas?.categorias)}
         onChange={onCategoriasChange}
       />
 

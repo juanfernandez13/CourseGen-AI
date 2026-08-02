@@ -18,11 +18,32 @@ const TIPOS: { key: string; label: string }[] = [
   { key: 'encontro',   label: 'encontros presenciais' },
 ];
 
-/* Mesmo default do servidor, para a tela mostrar o que será gerado. */
+/* Espelham normalizeCategorias em server/mbzGenerator/model.js. Precisam andar
+ * juntos: se divergirem, a tela mostra uma coisa e o .mbz sai com outra. */
+const TIPOS_EAD = ['forum', 'quiz', 'tarefa', 'chat', 'wiki', 'glossario'];
+const TIPOS_PRESENCIAL = ['encontro'];
+
 export const CATEGORIAS_PADRAO: CategoriaNota[] = [
-  { nome: 'Atividades a distância', peso: 40, tipos: ['forum', 'quiz', 'tarefa', 'chat', 'wiki', 'glossario'] },
-  { nome: 'Atividades presenciais', peso: 60, tipos: ['encontro'] },
+  { nome: 'Atividades a distância', peso: 40, tipos: TIPOS_EAD },
+  { nome: 'Atividades presenciais', peso: 60, tipos: TIPOS_PRESENCIAL },
 ];
+
+/**
+ * O JSON extraído traz apenas nome e peso — o prompt não pede "tipos". Sem
+ * normalizar aqui, cat.tipos chega undefined e a tela quebra ao renderizar.
+ */
+export function normalizarCategorias(brutas?: Partial<CategoriaNota>[]): CategoriaNota[] {
+  const lista = Array.isArray(brutas) && brutas.length ? brutas : CATEGORIAS_PADRAO;
+
+  return lista.map((cat, i) => ({
+    nome: cat?.nome || `Categoria ${i + 1}`,
+    peso: Number.isFinite(Number(cat?.peso)) ? Number(cat?.peso) : 0,
+    // Sem "tipos" declarado, mantém o comportamento histórico por posição.
+    tipos: Array.isArray(cat?.tipos) && cat.tipos.length
+      ? cat.tipos
+      : (i === 0 ? TIPOS_EAD : i === 1 ? TIPOS_PRESENCIAL : []),
+  }));
+}
 
 export default function GradebookEditor({
   categorias, onChange,
@@ -31,7 +52,7 @@ export default function GradebookEditor({
   onChange: (categorias: CategoriaNota[]) => void;
 }) {
   const somaPesos = categorias.reduce((s, c) => s + (Number(c.peso) || 0), 0);
-  const semCategoria = TIPOS.filter(t => !categorias.some(c => c.tipos.includes(t.key)));
+  const semCategoria = TIPOS.filter(t => !categorias.some(c => (c.tipos ?? []).includes(t.key)));
 
   function editar(i: number, patch: Partial<CategoriaNota>) {
     onChange(categorias.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
@@ -39,12 +60,13 @@ export default function GradebookEditor({
 
   /* Um tipo pertence a uma categoria só — marcar aqui desmarca nas outras. */
   function alternarTipo(i: number, tipo: string) {
-    const jaTem = categorias[i].tipos.includes(tipo);
+    const jaTem = (categorias[i].tipos ?? []).includes(tipo);
     onChange(categorias.map((c, idx) => {
       if (idx === i) {
-        return { ...c, tipos: jaTem ? c.tipos.filter(t => t !== tipo) : [...c.tipos, tipo] };
+        const atuais = c.tipos ?? [];
+        return { ...c, tipos: jaTem ? atuais.filter(t => t !== tipo) : [...atuais, tipo] };
       }
-      return jaTem ? c : { ...c, tipos: c.tipos.filter(t => t !== tipo) };
+      return jaTem ? c : { ...c, tipos: (c.tipos ?? []).filter(t => t !== tipo) };
     }));
   }
 
@@ -93,7 +115,7 @@ export default function GradebookEditor({
 
           <div className="flex flex-wrap gap-1.5">
             {TIPOS.map(tipo => {
-              const marcado = cat.tipos.includes(tipo.key);
+              const marcado = (cat.tipos ?? []).includes(tipo.key);
               return (
                 <button
                   key={tipo.key}

@@ -274,3 +274,25 @@ test('atividade cai na categoria que reivindica o seu tipo', () => {
   // Tipo que ninguém reivindica fica na raiz, como a Avaliação Final.
   assert.equal(gradeCategoryIdFor('encontro'), rootCatId);
 });
+
+/* O prompt do Gemini emite categorias só com nome e peso. A UI espelha estes
+ * mesmos defaults em app/components/GradebookEditor.tsx — se as listas abaixo
+ * mudarem, a de lá precisa mudar junto, senão a tela mostra uma coisa e o .mbz
+ * sai com outra. */
+test('categorias do Gemini (sem "tipos") recebem os tipos padrão', () => {
+  const [ead, presencial] = normalizeCategorias([
+    { nome: 'Atividades a distância', peso: 40 },
+    { nome: 'Atividades presenciais', peso: 60 },
+  ]);
+
+  assert.deepEqual(ead.tipos, ['forum', 'quiz', 'tarefa', 'chat', 'wiki', 'glossario']);
+  assert.deepEqual(presencial.tipos, ['encontro']);
+});
+
+test('categoria extra sem "tipos" não reivindica nada', () => {
+  const cats = normalizeCategorias([
+    { nome: 'A', peso: 30 }, { nome: 'B', peso: 30 }, { nome: 'C', peso: 40 },
+  ]);
+
+  assert.deepEqual(cats[2].tipos, []);
+});
