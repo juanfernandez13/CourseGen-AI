@@ -596,11 +596,55 @@ function buildAssignXml(id, ctx, aula, now, arquivos = [], gradeOnly = false) {
 
 // ── Gradebook ─────────────────────────────────────────────────────────────────
 
-function buildGradebook(rootCatId, eadCatId, presencialCatId, courseItemId, eadItemId, presItemId, categorias, now) {
-  const cat0  = categorias[0] || { nome: 'Atividades a distância', peso: 40 };
-  const cat1  = categorias[1] || { nome: 'Atividades presenciais',  peso: 60 };
-  const peso0 = parseFloat(cat0.peso).toFixed(5);
-  const peso1 = parseFloat(cat1.peso).toFixed(5);
+function buildGradebook(rootCatId, categorias, courseItemId, gradeSort, now) {
+  const categoria = (cat, i) => `    <grade_category id="${cat.id}">
+      <parent>${rootCatId}</parent>
+      <depth>2</depth>
+      <path>/${rootCatId}/${cat.id}/</path>
+      <fullname>${sanitize(cat.nome)}</fullname>
+      <aggregation>10</aggregation>
+      <keephigh>0</keephigh>
+      <droplow>0</droplow>
+      <aggregateonlygraded>0</aggregateonlygraded>
+      <aggregateoutcomes>0</aggregateoutcomes>
+      <timecreated>${now}</timecreated>
+      <timemodified>${now}</timemodified>
+      <hidden>0</hidden>
+    </grade_category>`;
+
+  const itemCategoria = (cat, i) => `    <grade_item id="${cat.itemId}">
+      <categoryid>$@NULL@$</categoryid>
+      <itemname></itemname>
+      <itemtype>category</itemtype>
+      <itemmodule>$@NULL@$</itemmodule>
+      <iteminstance>${cat.id}</iteminstance>
+      <itemnumber>$@NULL@$</itemnumber>
+      <iteminfo></iteminfo>
+      <idnumber></idnumber>
+      <calculation>$@NULL@$</calculation>
+      <gradetype>1</gradetype>
+      <grademax>10.00000</grademax>
+      <grademin>0.00000</grademin>
+      <scaleid>$@NULL@$</scaleid>
+      <outcomeid>$@NULL@$</outcomeid>
+      <gradepass>0.00000</gradepass>
+      <multfactor>1.00000</multfactor>
+      <plusfactor>0.00000</plusfactor>
+      <aggregationcoef>${parseFloat(cat.peso || 0).toFixed(5)}</aggregationcoef>
+      <aggregationcoef2>0.00000</aggregationcoef2>
+      <weightoverride>0</weightoverride>
+      <sortorder>${gradeSort.categorias[i]}</sortorder>
+      <display>0</display>
+      <decimals>$@NULL@$</decimals>
+      <hidden>0</hidden>
+      <locked>0</locked>
+      <locktime>0</locktime>
+      <needsupdate>0</needsupdate>
+      <timecreated>${now}</timecreated>
+      <timemodified>${now}</timemodified>
+      <grade_grades>
+      </grade_grades>
+    </grade_item>`;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <gradebook>
@@ -621,34 +665,7 @@ function buildGradebook(rootCatId, eadCatId, presencialCatId, courseItemId, eadI
       <timemodified>${now}</timemodified>
       <hidden>0</hidden>
     </grade_category>
-    <grade_category id="${eadCatId}">
-      <parent>${rootCatId}</parent>
-      <depth>2</depth>
-      <path>/${rootCatId}/${eadCatId}/</path>
-      <fullname>${sanitize(cat0.nome)}</fullname>
-      <aggregation>10</aggregation>
-      <keephigh>0</keephigh>
-      <droplow>0</droplow>
-      <aggregateonlygraded>0</aggregateonlygraded>
-      <aggregateoutcomes>0</aggregateoutcomes>
-      <timecreated>${now}</timecreated>
-      <timemodified>${now}</timemodified>
-      <hidden>0</hidden>
-    </grade_category>
-    <grade_category id="${presencialCatId}">
-      <parent>${rootCatId}</parent>
-      <depth>2</depth>
-      <path>/${rootCatId}/${presencialCatId}/</path>
-      <fullname>${sanitize(cat1.nome)}</fullname>
-      <aggregation>10</aggregation>
-      <keephigh>0</keephigh>
-      <droplow>0</droplow>
-      <aggregateonlygraded>0</aggregateonlygraded>
-      <aggregateoutcomes>0</aggregateoutcomes>
-      <timecreated>${now}</timecreated>
-      <timemodified>${now}</timemodified>
-      <hidden>0</hidden>
-    </grade_category>
+${categorias.map(categoria).join('\n')}
   </grade_categories>
   <grade_items>
     <grade_item id="${courseItemId}">
@@ -672,7 +689,7 @@ function buildGradebook(rootCatId, eadCatId, presencialCatId, courseItemId, eadI
       <aggregationcoef>0.00000</aggregationcoef>
       <aggregationcoef2>0.00000</aggregationcoef2>
       <weightoverride>0</weightoverride>
-      <sortorder>1</sortorder>
+      <sortorder>${gradeSort.course}</sortorder>
       <display>0</display>
       <decimals>$@NULL@$</decimals>
       <hidden>0</hidden>
@@ -684,72 +701,7 @@ function buildGradebook(rootCatId, eadCatId, presencialCatId, courseItemId, eadI
       <grade_grades>
       </grade_grades>
     </grade_item>
-    <grade_item id="${eadItemId}">
-      <categoryid>$@NULL@$</categoryid>
-      <itemname></itemname>
-      <itemtype>category</itemtype>
-      <itemmodule>$@NULL@$</itemmodule>
-      <iteminstance>${eadCatId}</iteminstance>
-      <itemnumber>$@NULL@$</itemnumber>
-      <iteminfo></iteminfo>
-      <idnumber></idnumber>
-      <calculation>$@NULL@$</calculation>
-      <gradetype>1</gradetype>
-      <grademax>10.00000</grademax>
-      <grademin>0.00000</grademin>
-      <scaleid>$@NULL@$</scaleid>
-      <outcomeid>$@NULL@$</outcomeid>
-      <gradepass>0.00000</gradepass>
-      <multfactor>1.00000</multfactor>
-      <plusfactor>0.00000</plusfactor>
-      <aggregationcoef>${peso0}</aggregationcoef>
-      <aggregationcoef2>0.00000</aggregationcoef2>
-      <weightoverride>0</weightoverride>
-      <sortorder>2</sortorder>
-      <display>0</display>
-      <decimals>$@NULL@$</decimals>
-      <hidden>0</hidden>
-      <locked>0</locked>
-      <locktime>0</locktime>
-      <needsupdate>0</needsupdate>
-      <timecreated>${now}</timecreated>
-      <timemodified>${now}</timemodified>
-      <grade_grades>
-      </grade_grades>
-    </grade_item>
-    <grade_item id="${presItemId}">
-      <categoryid>$@NULL@$</categoryid>
-      <itemname></itemname>
-      <itemtype>category</itemtype>
-      <itemmodule>$@NULL@$</itemmodule>
-      <iteminstance>${presencialCatId}</iteminstance>
-      <itemnumber>$@NULL@$</itemnumber>
-      <iteminfo></iteminfo>
-      <idnumber></idnumber>
-      <calculation>$@NULL@$</calculation>
-      <gradetype>1</gradetype>
-      <grademax>10.00000</grademax>
-      <grademin>0.00000</grademin>
-      <scaleid>$@NULL@$</scaleid>
-      <outcomeid>$@NULL@$</outcomeid>
-      <gradepass>0.00000</gradepass>
-      <multfactor>1.00000</multfactor>
-      <plusfactor>0.00000</plusfactor>
-      <aggregationcoef>${peso1}</aggregationcoef>
-      <aggregationcoef2>0.00000</aggregationcoef2>
-      <weightoverride>0</weightoverride>
-      <sortorder>500</sortorder>
-      <display>0</display>
-      <decimals>$@NULL@$</decimals>
-      <hidden>0</hidden>
-      <locked>0</locked>
-      <locktime>0</locktime>
-      <needsupdate>0</needsupdate>
-      <timecreated>${now}</timecreated>
-      <timemodified>${now}</timemodified>
-      <grade_grades>
-      </grade_grades>
-    </grade_item>
+${categorias.map(itemCategoria).join('\n')}
   </grade_items>
   <grade_letters>
   </grade_letters>

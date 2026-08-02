@@ -11,15 +11,41 @@ const { PROMPT_QUIZ_BATCH, PROMPT_SCHEMA } = require('../extractor');
 const NOW = 1700000000;
 
 test('buildGradebook: totais das subcategorias seguem o formato do backup Moodle', () => {
-  const xml = buildGradebook(100, 200, 300, 400, 500, 600, [], NOW);
+  const categorias = [
+    { id: 200, itemId: 500, nome: 'Atividades a distância', peso: 40 },
+    { id: 300, itemId: 600, nome: 'Atividades presenciais', peso: 60 },
+  ];
+  const gradeSort = { course: 1, categorias: [2, 20], porAtividade: {}, avaliacaoFinal: 30 };
+  const xml = buildGradebook(100, categorias, 400, gradeSort, NOW);
+
   const eadItem = xml.match(/<grade_item id="500">([\s\S]*?)<\/grade_item>/)?.[1];
   const presencialItem = xml.match(/<grade_item id="600">([\s\S]*?)<\/grade_item>/)?.[1];
 
   assert.match(eadItem, /<categoryid>\$@NULL@\$<\/categoryid>/);
   assert.match(eadItem, /<sortorder>2<\/sortorder>/);
+  assert.match(eadItem, /<aggregationcoef>40.00000<\/aggregationcoef>/);
   assert.match(presencialItem, /<categoryid>\$@NULL@\$<\/categoryid>/);
-  assert.match(presencialItem, /<sortorder>500<\/sortorder>/);
+  assert.match(presencialItem, /<sortorder>20<\/sortorder>/);
+  assert.match(presencialItem, /<aggregationcoef>60.00000<\/aggregationcoef>/);
   assert.match(xml, /<grade_setting id="3100">/);
+});
+
+test('buildGradebook: aceita mais de duas categorias', () => {
+  const categorias = [
+    { id: 201, itemId: 501, nome: 'Unidade I',  peso: 30 },
+    { id: 202, itemId: 502, nome: 'Unidade II', peso: 30 },
+    { id: 203, itemId: 503, nome: 'Presencial', peso: 40 },
+  ];
+  const gradeSort = { course: 1, categorias: [2, 10, 20], porAtividade: {}, avaliacaoFinal: 30 };
+  const xml = buildGradebook(100, categorias, 400, gradeSort, NOW);
+
+  assert.equal((xml.match(/<grade_category id="/g) || []).length, 4); // raiz + 3
+  assert.equal((xml.match(/<itemtype>category<\/itemtype>/g) || []).length, 3);
+  for (const nome of ['Unidade I', 'Unidade II', 'Presencial']) {
+    assert.ok(xml.includes(`<fullname>${nome}</fullname>`));
+  }
+  // Cada subcategoria pendura na raiz, com depth e path do padrão Moodle.
+  assert.match(xml, /<path>\/100\/203\/<\/path>/);
 });
 
 test('buildActivityInforef: preserva referências de nota, arquivos e questões', () => {

@@ -13,10 +13,7 @@ function createGenerationModel(matrizData, base) {
   const aulas = matrizData.aulas || [];
   const encontros = matrizData.encontros || [];
   const avFinal = matrizData.avaliacao_final || {};
-  const categorias = matrizData.livro_de_notas?.categorias || [
-    { nome: 'Atividades a distância', peso: 40 },
-    { nome: 'Atividades presenciais', peso: 60 },
-  ];
+  const categorias = normalizeCategorias(matrizData.livro_de_notas?.categorias);
 
   const shortname = sanitize(disciplina.codigo || 'DISC001');
   const fullname = sanitize(disciplina.nome || 'Disciplina');
@@ -71,12 +68,26 @@ function createGenerationModel(matrizData, base) {
     avSectionId: afBase + 2,
     faltasSectionId: afBase + 3,
     rootCatId: catId,
-    eadCatId: catId + 1000,
-    presencialCatId: catId + 1001,
     courseGradeItemId: catId + 2000,
-    eadCatItemId: catId + 2001,
-    presencialCatItemId: catId + 2002,
+    // Uma categoria por item de livro de notas, na ordem declarada.
+    categoriaIds:     categorias.map((_, i) => catId + 1000 + i),
+    categoriaItemIds: categorias.map((_, i) => catId + 2001 + i),
   };
+
+  /* Qual categoria recebe cada tipo de atividade. Tipo não reivindicado por
+   * nenhuma categoria cai na raiz, como a Avaliação Final. */
+  const catIdPorTipo = new Map();
+  categorias.forEach((cat, i) => {
+    for (const tipo of cat.tipos) {
+      if (!catIdPorTipo.has(tipo)) catIdPorTipo.set(tipo, ids.categoriaIds[i]);
+    }
+  });
+  ids.gradeCategoryIdFor = tipo => catIdPorTipo.get(tipo) ?? ids.rootCatId;
+
+  /* O Moodle numera o livro de notas de forma densa: o item da categoria vem
+   * imediatamente antes dos seus filhos. Numeração esparsa fazia as atividades
+   * aparecerem soltas na restauração. */
+  ids.gradeSort = buildGradeSort({ categorias, ids, aulas, encontros });
 
   const allActivities = buildActivityDescriptors({ aulas, encontros, avFinal, ids });
   const allSections = [
@@ -179,4 +190,70 @@ function activity(moduleid, sectionid, modulename, title) {
   };
 }
 
-module.exports = { createGenerationModel, normalizeMural };
+/* Tipos que uma categoria pode reivindicar. 'avaliacao_final' fica de fora de
+ * propósito: o Moodle a mantém na raiz. */
+const TIPOS_EAD = ['forum', 'quiz', 'tarefa', 'chat', 'wiki', 'glossario'];
+const TIPOS_PRESENCIAL = ['encontro'];
+
+function normalizeCategorias(brutas) {
+  const lista = Array.isArray(brutas) && brutas.length ? brutas : [
+    { nome: 'Atividades a distância', peso: 40 },
+    { nome: 'Atividades presenciais', peso: 60 },
+  ];
+
+  return lista.map((cat, i) => ({
+    nome: cat?.nome || `Categoria ${i + 1}`,
+    peso: Number.isFinite(Number(cat?.peso)) ? Number(cat.peso) : 0,
+    // Sem "tipos" declarado, mantém o comportamento histórico por posição.
+    tipos: Array.isArray(cat?.tipos) && cat.tipos.length
+      ? cat.tipos
+      : (i === 0 ? TIPOS_EAD : i === 1 ? TIPOS_PRESENCIAL : []),
+  }));
+}
+
+/** Atividades que geram item de nota, na ordem em que são escritas. */
+function gradedItems({ aulas, encontros, ids }) {
+  const items = [];
+  aulas.forEach((aula, i) => {
+    const a = ids.aulaIds[i];
+    if (aula.forum) items.push({ id: a.forumId, tipo: 'forum' });
+    if (aula.quiz) items.push({ id: a.quizId, tipo: 'quiz' });
+    if (aula.chat) items.push({ id: a.assignId, tipo: 'chat' });
+    else if (aula.tarefa) items.push({ id: a.assignId, tipo: 'tarefa' });
+    if (aula.wiki) items.push({ id: a.wikiAssignId, tipo: 'wiki' });
+    if (aula.glossario) items.push({ id: a.glossaryId, tipo: 'glossario' });
+  });
+  encontros.forEach((enc, i) => {
+    if (enc.avaliacao === 'nota_media') items.push({ id: ids.encontrosIds[i].notaId, tipo: 'encontro' });
+  });
+  return items;
+}
+
+/**
+ * Numeração densa e sequencial: curso, depois cada categoria seguida dos seus
+ * filhos, e por fim o que ficou na raiz. É o padrão que o Moodle gera.
+ */
+function buildGradeSort({ categorias, ids, aulas, encontros }) {
+  const items = gradedItems({ aulas, encontros, ids });
+  const sort = { course: 1, categorias: [], porAtividade: {} };
+  let proximo = 2;
+
+  categorias.forEach((cat, i) => {
+    sort.categorias[i] = proximo++;
+    for (const item of items) {
+      if (cat.tipos.includes(item.tipo) && sort.porAtividade[item.id] === undefined) {
+        sort.porAtividade[item.id] = proximo++;
+      }
+    }
+  });
+
+  // Sobras (tipo sem categoria) e a Avaliação Final ficam na raiz, ao final.
+  for (const item of items) {
+    if (sort.porAtividade[item.id] === undefined) sort.porAtividade[item.id] = proximo++;
+  }
+  sort.avaliacaoFinal = proximo++;
+
+  return sort;
+}
+
+module.exports = { createGenerationModel, normalizeMural, normalizeCategorias, buildGradeSort };

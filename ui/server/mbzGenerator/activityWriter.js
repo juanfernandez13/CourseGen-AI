@@ -18,7 +18,7 @@ function writeActivities({ model, now, write, writeActivityStubs, fileEntries, e
 
 function writeLessonActivities({ model, now, write, writeActivityStubs, fileEntries, emptyGrades }) {
   const { aulas } = model;
-  const { aulaIds, eadCatId } = model.ids;
+  const { aulaIds, gradeCategoryIdFor, gradeSort } = model.ids;
 
   for (const [i, aula] of aulas.entries()) {
     const ids = aulaIds[i];
@@ -30,7 +30,7 @@ function writeLessonActivities({ model, now, write, writeActivityStubs, fileEntr
       const end = dateToTs(aula.forum.data_fim || aula.data_fim, true, '23:55:00');
       write(`${dir}/forum.xml`, buildForumDiscussionXml(ids.forumId, ids.forumCtx, aula, now));
       writeActivityStubs(dir, ids.forumId, 'forum', ids.sectionId, secNum, start,
-        buildActivityGradesXml(ids.forumId, eadCatId, aula.forum.titulo || `Fórum ${i + 1}`, 'forum', i * 10 + 10, now, 1), end);
+        buildActivityGradesXml(ids.forumId, gradeCategoryIdFor('forum'), aula.forum.titulo || `Fórum ${i + 1}`, 'forum', gradeSort.porAtividade[ids.forumId], now, 1), end);
       write(`${dir}/grading.xml`, buildGradingXml(ids.forumId + 70000, 'forum'));
     }
 
@@ -38,7 +38,7 @@ function writeLessonActivities({ model, now, write, writeActivityStubs, fileEntr
       const dir = `activities/quiz_${ids.quizId}`;
       write(`${dir}/quiz.xml`, buildQuizXml(ids.quizId, ids.quizCtx, aula, now));
       writeActivityStubs(dir, ids.quizId, 'quiz', ids.sectionId, secNum, 0,
-        buildActivityGradesXml(ids.quizId, eadCatId, aula.quiz.titulo || `Questionário ${i + 1}`, 'quiz', i * 10 + 11, now));
+        buildActivityGradesXml(ids.quizId, gradeCategoryIdFor('quiz'), aula.quiz.titulo || `Questionário ${i + 1}`, 'quiz', gradeSort.porAtividade[ids.quizId], now));
       if (aula.quiz.questoes?.length) write(`${dir}/inforef.xml`, buildQuizInforef(ids.quizId));
     }
 
@@ -56,7 +56,7 @@ function writeLessonActivities({ model, now, write, writeActivityStubs, fileEntr
       write(`${assignDir}/assign.xml`, buildAssignXml(ids.assignId, ids.assignCtx,
         { tarefa: { titulo: title, descricao: 'Atividade para receber a nota do chat' } }, now, [], true));
       writeActivityStubs(assignDir, ids.assignId, 'assign', ids.sectionId, secNum, 0,
-        buildActivityGradesXml(ids.assignId, eadCatId, title, 'assign', i * 10 + 12, now), 0,
+        buildActivityGradesXml(ids.assignId, gradeCategoryIdFor('chat'), title, 'assign', gradeSort.porAtividade[ids.assignId], now), 0,
         { visible: 0, showdescription: 1 });
       write(`${assignDir}/grading.xml`, buildGradingXml(ids.assignId + 70000, 'submissions'));
     }
@@ -75,7 +75,7 @@ function writeLessonActivities({ model, now, write, writeActivityStubs, fileEntr
       write(`${assignDir}/assign.xml`, buildAssignXml(ids.wikiAssignId, ids.wikiAssignCtx,
         { tarefa: { titulo: title, descricao: '' } }, now, [], true));
       writeActivityStubs(assignDir, ids.wikiAssignId, 'assign', ids.sectionId, secNum, 0,
-        buildActivityGradesXml(ids.wikiAssignId, eadCatId, title, 'assign', i * 10 + 13, now), 0,
+        buildActivityGradesXml(ids.wikiAssignId, gradeCategoryIdFor('wiki'), title, 'assign', gradeSort.porAtividade[ids.wikiAssignId], now), 0,
         { visible: 0 });
       write(`${assignDir}/grading.xml`, buildGradingXml(ids.wikiAssignId + 70000, 'submissions'));
     }
@@ -86,16 +86,16 @@ function writeLessonActivities({ model, now, write, writeActivityStubs, fileEntr
       const end = dateToTs(aula.glossario.data_fim || aula.data_fim, true, '23:55:00');
       write(`${dir}/glossary.xml`, buildGlossaryXml(ids.glossaryId, ids.glossaryCtx, aula, now));
       writeActivityStubs(dir, ids.glossaryId, 'glossary', ids.sectionId, secNum, start,
-        buildActivityGradesXml(ids.glossaryId, eadCatId, aula.glossario.titulo || `Glossário ${i + 1}`, 'glossary', i * 10 + 14, now), end);
+        buildActivityGradesXml(ids.glossaryId, gradeCategoryIdFor('glossario'), aula.glossario.titulo || `Glossário ${i + 1}`, 'glossary', gradeSort.porAtividade[ids.glossaryId], now), end);
     }
 
     if (!aula.chat && aula.tarefa) {
-      writeTask({ aula, ids, i, secNum, eadCatId, now, write, writeActivityStubs, fileEntries });
+      writeTask({ aula, ids, i, secNum, gradeCategoryIdFor, gradeSort, now, write, writeActivityStubs, fileEntries });
     }
   }
 }
 
-function writeTask({ aula, ids, i, secNum, eadCatId, now, write, writeActivityStubs, fileEntries }) {
+function writeTask({ aula, ids, i, secNum, gradeCategoryIdFor, gradeSort, now, write, writeActivityStubs, fileEntries }) {
   const dir = `activities/assign_${ids.assignId}`;
   const arquivos = (aula.tarefa.arquivos || []).filter(file => {
     if (!file?.filePath) return false;
@@ -103,7 +103,7 @@ function writeTask({ aula, ids, i, secNum, eadCatId, now, write, writeActivitySt
   });
   write(`${dir}/assign.xml`, buildAssignXml(ids.assignId, ids.assignCtx, aula, now, arquivos));
   writeActivityStubs(dir, ids.assignId, 'assign', ids.sectionId, secNum, 0,
-    buildActivityGradesXml(ids.assignId, eadCatId, aula.tarefa.titulo || `Tarefa ${i + 1}`, 'assign', i * 10 + 12, now));
+    buildActivityGradesXml(ids.assignId, gradeCategoryIdFor('tarefa'), aula.tarefa.titulo || `Tarefa ${i + 1}`, 'assign', gradeSort.porAtividade[ids.assignId], now));
   write(`${dir}/grading.xml`, buildGradingXml(ids.assignId + 70000, 'submissions'));
 
   if (!arquivos.length) return;
@@ -122,7 +122,7 @@ function writeTask({ aula, ids, i, secNum, eadCatId, now, write, writeActivitySt
 
 function writeMeetingActivities({ model, now, write, writeActivityStubs }) {
   const { encontros } = model;
-  const { encontrosIds, avSectionId, faltasSectionId, presencialCatId } = model.ids;
+  const { encontrosIds, avSectionId, faltasSectionId, gradeCategoryIdFor, gradeSort } = model.ids;
   const sectionNumber = model.aulas.length + 1;
 
   for (const [i, encontro] of encontros.entries()) {
@@ -135,7 +135,7 @@ function writeMeetingActivities({ model, now, write, writeActivityStubs }) {
       write(`${dir}/assign.xml`, buildAssignXml(ids.notaId, ids.notaCtx,
         { tarefa: { titulo: notaTitle, descricao: encontro.descricao || '' } }, now, [], true));
       writeActivityStubs(dir, ids.notaId, 'assign', avSectionId, sectionNumber, 0,
-        buildActivityGradesXml(ids.notaId, presencialCatId, notaTitle, 'assign', 510 + i * 2, now));
+        buildActivityGradesXml(ids.notaId, gradeCategoryIdFor('encontro'), notaTitle, 'assign', gradeSort.porAtividade[ids.notaId], now));
       write(`${dir}/grading.xml`, buildGradingXml(ids.notaId + 70000, 'submissions'));
     }
 
@@ -149,14 +149,14 @@ function writeMeetingActivities({ model, now, write, writeActivityStubs }) {
 
 function writeFinalAssessment({ model, now, write, writeActivityStubs }) {
   const { avFinal } = model;
-  const { avFinalId, avFinalCtx, avSectionId, rootCatId } = model.ids;
+  const { avFinalId, avFinalCtx, avSectionId, rootCatId, gradeSort } = model.ids;
   const sectionNumber = model.aulas.length + 1;
   const title = sanitize(normalizeTitleBrackets(avFinal.titulo || '[Disciplina] [Avaliação Final]'));
   const dir = `activities/assign_${avFinalId}`;
   write(`${dir}/assign.xml`, buildAssignXml(avFinalId, avFinalCtx,
     { tarefa: { titulo: title, descricao: avFinal.descricao || '' } }, now, [], true));
   writeActivityStubs(dir, avFinalId, 'assign', avSectionId, sectionNumber, 0,
-    buildActivityGradesXml(avFinalId, rootCatId, title, 'assign', 900, now));
+    buildActivityGradesXml(avFinalId, rootCatId, title, 'assign', gradeSort.avaliacaoFinal, now));
   write(`${dir}/grading.xml`, buildGradingXml(avFinalId + 70000, 'submissions'));
 }
 

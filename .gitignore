@@ -7,8 +7,13 @@
 *.zip
 *.mbz
 *.pdf
+*.xlsx
+*.csv
 .env
+.env.*
 .claude
+.next/
+*.tsbuildinfo
 *.der
 *.priv
 *.key

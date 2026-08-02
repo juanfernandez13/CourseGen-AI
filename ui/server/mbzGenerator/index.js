@@ -126,7 +126,7 @@ function writeBackupContents({ matrizData, model, now, backupId, write, writeAct
   } = model;
   const {
     base, catId, contextId, aulaIds, encontrosIds, avFinalId,
-    avSectionId, faltasSectionId, rootCatId, eadCatId, presencialCatId,
+    avSectionId, faltasSectionId, rootCatId, categoriaIds, categoriaItemIds, gradeSort,
     courseGradeItemId, eadCatItemId, presencialCatItemId,
   } = ids;
 
@@ -423,7 +423,10 @@ ${actSettings}
   }
 
   write('questions.xml',    buildQuestionsXml(aulas, aulaIds, now));
-  write('gradebook.xml',    buildGradebook(rootCatId, eadCatId, presencialCatId, courseGradeItemId, eadCatItemId, presencialCatItemId, categorias, now));
+  const categoriasComIds = categorias.map((cat, i) => ({
+    ...cat, id: categoriaIds[i], itemId: categoriaItemIds[i],
+  }));
+  write('gradebook.xml',    buildGradebook(rootCatId, categoriasComIds, courseGradeItemId, gradeSort, now));
   write('outcomes.xml',     `<?xml version="1.0" encoding="UTF-8"?>\n<outcomes_definition>\n</outcomes_definition>`);
   write('badges.xml',       `<?xml version="1.0" encoding="UTF-8"?>\n<badges>\n</badges>`);
   write('completion.xml',   `<?xml version="1.0" encoding="UTF-8"?>\n<course_completion>\n</course_completion>`);

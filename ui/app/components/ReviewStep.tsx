@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import FileViewer from './FileViewer';
+import GradebookEditor, { CATEGORIAS_PADRAO, type CategoriaNota } from './GradebookEditor';
 import type { useJsonHistory } from '../lib/useJsonHistory';
 import type { FilesUpdater } from '../lib/usePersistedFiles';
 import { mapTaskFiles } from '../../server/taskFileMapper';
@@ -24,6 +25,7 @@ type MatrizData = {
   disciplina?: { nome?: string; codigo?: string; carga_horaria?: string; semestre?: string; turma?: string; polo?: string };
   professor?:  { nome?: string; email?: string; titulacao?: string; tutor?: string };
   aulas?: Aula[];
+  livro_de_notas?: { categorias?: CategoriaNota[] };
 };
 
 /* ─── Associação explícita de tarefa ─────────────────────────────────────────
@@ -540,12 +542,13 @@ function AulaCard({ aula, tarefaFiles, tarefaNumero, totalTarefas, onAttach, onD
 }
 
 /* ─── Visual View ────────────────────────────────────────────────────────── */
-function VisualView({ data, tarefaMap, onAttach, onDetach, onMove }: {
+function VisualView({ data, tarefaMap, onAttach, onDetach, onMove, onCategoriasChange }: {
   data: MatrizData;
   tarefaMap: Record<number, File[]>;
   onAttach: (files: File[]) => void;
   onDetach: (file: File) => void;
   onMove: (file: File, destino: number) => void;
+  onCategoriasChange: (categorias: CategoriaNota[]) => void;
 }) {
   const aulas = data.aulas ?? [];
 
@@ -618,6 +621,13 @@ function VisualView({ data, tarefaMap, onAttach, onDetach, onMove }: {
           </div>
         ))}
       </div>
+
+      <GradebookEditor
+        categorias={data.livro_de_notas?.categorias?.length
+          ? data.livro_de_notas.categorias
+          : CATEGORIAS_PADRAO}
+        onChange={onCategoriasChange}
+      />
 
       {/* Grid */}
       {aulas.length === 0 ? (
@@ -709,6 +719,16 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
 
   function handleDetach(alvo: File) {
     onTarefaFilesChange?.(prev => prev.filter(f => f !== alvo));
+  }
+
+  /* O JSON é a fonte da verdade — o editor grava nele, não em estado à parte. */
+  function handleCategorias(categorias: CategoriaNota[]) {
+    if (!data) return;
+    onJsonChange(JSON.stringify(
+      { ...data, livro_de_notas: { ...data.livro_de_notas, categorias } },
+      null,
+      2,
+    ));
   }
 
   /* Mover é reetiquetar: o prefixo "tarefa_N__" é o que o servidor lê, então
@@ -829,7 +849,7 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
 
       {/* Content */}
       {view === 'visual' && data  && (
-        <VisualView data={data} tarefaMap={tarefaMap} onAttach={handleAttach} onDetach={handleDetach} onMove={handleMove} />
+        <VisualView data={data} tarefaMap={tarefaMap} onAttach={handleAttach} onDetach={handleDetach} onMove={handleMove} onCategoriasChange={handleCategorias} />
       )}
       {view === 'visual' && !data && (
         <div className="flex flex-col items-center justify-center py-20 rounded-xl"

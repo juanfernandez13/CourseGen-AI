@@ -177,3 +177,100 @@ test('generateMBZ produz um arquivo gzip Moodle não vazio', async () => {
     fs.rmSync(output, { force: true });
   }
 });
+
+/* ─── Livro de notas personalizável ───────────────────────────────────────── */
+
+const { normalizeCategorias } = require('./model');
+
+test('categorias: sem "tipos" declarado, mantém o comportamento histórico', () => {
+  const [ead, presencial] = normalizeCategorias(undefined);
+
+  assert.equal(ead.nome, 'Atividades a distância');
+  assert.equal(ead.peso, 40);
+  assert.ok(ead.tipos.includes('forum') && ead.tipos.includes('tarefa'));
+  assert.deepEqual(presencial.tipos, ['encontro']);
+});
+
+test('categorias: aceita mais de duas, com tipos próprios', () => {
+  const cats = normalizeCategorias([
+    { nome: 'Unidade I',  peso: 30, tipos: ['forum', 'quiz'] },
+    { nome: 'Unidade II', peso: 30, tipos: ['tarefa'] },
+    { nome: 'Presencial', peso: 40, tipos: ['encontro'] },
+  ]);
+
+  assert.equal(cats.length, 3);
+  assert.deepEqual(cats.map(c => c.peso), [30, 30, 40]);
+  assert.deepEqual(cats[1].tipos, ['tarefa']);
+});
+
+test('categorias: peso inválido vira 0 em vez de NaN no XML', () => {
+  assert.equal(normalizeCategorias([{ nome: 'X', peso: 'abc' }])[0].peso, 0);
+  assert.equal(normalizeCategorias([{ nome: 'X' }])[0].peso, 0);
+});
+
+test('sortorder: numeração densa, categoria antes dos seus filhos', () => {
+  const model = createGenerationModel({
+    disciplina: { nome: 'D', codigo: 'D1' },
+    aulas: [
+      { titulo: 'A1', forum: { titulo: 'F1' }, tarefa: { titulo: 'T1' } },
+      { titulo: 'A2', quiz: { titulo: 'Q2' } },
+    ],
+    encontros: [{ numero: 1, avaliacao: 'nota_media' }],
+  }, 1000);
+
+  const { gradeSort, aulaIds, encontrosIds } = model.ids;
+
+  assert.equal(gradeSort.course, 1);
+  // Categoria EaD abre em 2; seus três itens ocupam 3, 4 e 5.
+  assert.equal(gradeSort.categorias[0], 2);
+  assert.deepEqual(
+    [aulaIds[0].forumId, aulaIds[0].assignId, aulaIds[1].quizId].map(id => gradeSort.porAtividade[id]),
+    [3, 4, 5],
+  );
+  // Presencial vem depois, colada no seu único filho.
+  assert.equal(gradeSort.categorias[1], 6);
+  assert.equal(gradeSort.porAtividade[encontrosIds[0].notaId], 7);
+  // Avaliação Final fecha na raiz.
+  assert.equal(gradeSort.avaliacaoFinal, 8);
+});
+
+test('sortorder: sem buracos e sem repetição', () => {
+  const model = createGenerationModel({
+    disciplina: { nome: 'D', codigo: 'D1' },
+    aulas: [
+      { forum: { titulo: 'F' }, tarefa: { titulo: 'T' }, quiz: { titulo: 'Q' } },
+      { forum: { titulo: 'F2' }, glossario: { titulo: 'G' } },
+    ],
+    encontros: [{ numero: 1, avaliacao: 'nota_media' }, { numero: 2, avaliacao: 'nota_media' }],
+  }, 5000);
+
+  const { gradeSort } = model.ids;
+  const todos = [
+    gradeSort.course,
+    ...gradeSort.categorias,
+    ...Object.values(gradeSort.porAtividade),
+    gradeSort.avaliacaoFinal,
+  ].sort((a, b) => a - b);
+
+  assert.deepEqual(todos, Array.from({ length: todos.length }, (_, i) => i + 1));
+});
+
+test('atividade cai na categoria que reivindica o seu tipo', () => {
+  const model = createGenerationModel({
+    disciplina: { nome: 'D', codigo: 'D1' },
+    aulas: [{ forum: { titulo: 'F' }, tarefa: { titulo: 'T' } }],
+    livro_de_notas: {
+      categorias: [
+        { nome: 'Discussões', peso: 50, tipos: ['forum'] },
+        { nome: 'Entregas',   peso: 50, tipos: ['tarefa'] },
+      ],
+    },
+  }, 2000);
+
+  const { gradeCategoryIdFor, categoriaIds, rootCatId } = model.ids;
+
+  assert.equal(gradeCategoryIdFor('forum'), categoriaIds[0]);
+  assert.equal(gradeCategoryIdFor('tarefa'), categoriaIds[1]);
+  // Tipo que ninguém reivindica fica na raiz, como a Avaliação Final.
+  assert.equal(gradeCategoryIdFor('encontro'), rootCatId);
+});
