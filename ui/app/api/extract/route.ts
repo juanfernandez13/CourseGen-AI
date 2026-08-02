@@ -9,6 +9,7 @@ import {
   extractAllQuizzes,
 } from '../../../server/extractor';
 import { discardBlobs, downloadToTmp, isRemoteFile, type RemoteFile } from '../../../server/blobStore';
+import { mapQuizFiles } from '../../../server/taskFileMapper';
 
 export const runtime = 'nodejs';
 // Vercel Hobby with Fluid Compute supports up to 300 seconds.
@@ -32,9 +33,11 @@ async function persistUpload(file: File, prefix: string): Promise<string> {
   return filePath;
 }
 
+type QuizEntry = { filePath: string; filename: string };
+
 type Inputs = {
   matrizPath: string | null;
-  quizPaths: string[];
+  quizzes: QuizEntry[];
   /** URLs a apagar do storage depois do processamento. */
   blobUrls: string[];
 };
@@ -54,7 +57,10 @@ async function collectInputs(req: NextRequest): Promise<Inputs> {
 
   return {
     matrizPath: matriz ? await downloadToTmp(matriz, 'matriz') : null,
-    quizPaths: await Promise.all(quizzes.map((q: RemoteFile) => downloadToTmp(q, 'quiz'))),
+    quizzes: await Promise.all(quizzes.map(async (q: RemoteFile) => ({
+      filePath: await downloadToTmp(q, 'quiz'),
+      filename: q.name,
+    }))),
     blobUrls,
   };
 }
@@ -66,7 +72,10 @@ async function collectFromFormData(req: NextRequest): Promise<Inputs> {
 
   return {
     matrizPath: matriz instanceof File ? await persistUpload(matriz, 'matriz') : null,
-    quizPaths: await Promise.all(quizzes.map(quiz => persistUpload(quiz, 'quiz'))),
+    quizzes: await Promise.all(quizzes.map(async quiz => ({
+      filePath: await persistUpload(quiz, 'quiz'),
+      filename: quiz.name,
+    }))),
     blobUrls: [],
   };
 }
@@ -80,10 +89,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let inputs: Inputs = { matrizPath: null, quizPaths: [], blobUrls: [] };
+  let inputs: Inputs = { matrizPath: null, quizzes: [], blobUrls: [] };
   try {
     inputs = await collectInputs(req);
-    const { matrizPath, quizPaths } = inputs;
+    const { matrizPath } = inputs;
+
+    /* Número no nome ("Quiz 3", "Questionário 3") define a qual questionário o
+     * arquivo pertence; sem número, vale a ordem natural do nome. Antes disso a
+     * associação dependia da ordem de seleção no navegador. */
+    const quizPorNumero = mapQuizFiles(inputs.quizzes);
+    const numerosQuiz = Object.keys(quizPorNumero).map(Number).sort((a, b) => a - b);
+    const quizPaths = numerosQuiz.map(n => quizPorNumero[n][0].filePath);
 
     // Matriz e quizzes são independentes: execute as chamadas ao Gemini em paralelo.
     const matrizPromise: Promise<Record<string, unknown> | null> = matrizPath
@@ -110,12 +126,15 @@ export async function POST(req: NextRequest) {
     }
 
     if (data) {
+      // extractedQuizzes[i] corresponde a numerosQuiz[i].
+      const porNumero = new Map(numerosQuiz.map((n, i) => [n, extractedQuizzes[i]]));
       let quizIndex = 0;
       const aulas = Array.isArray(data.aulas) ? data.aulas as Array<Record<string, unknown>> : [];
       for (const aula of aulas) {
-        if (aula.quiz && quizIndex < extractedQuizzes.length) {
-          (aula.quiz as Record<string, unknown>).questoes = extractedQuizzes[quizIndex]?.questoes || [];
+        if (aula.quiz) {
           quizIndex++;
+          const extraido = porNumero.get(quizIndex);
+          if (extraido) (aula.quiz as Record<string, unknown>).questoes = extraido.questoes || [];
         }
       }
     }
@@ -133,7 +152,7 @@ export async function POST(req: NextRequest) {
           : 'Não foi possível extrair os documentos com o Gemini.';
     return NextResponse.json({ error: message }, { status: 500 });
   } finally {
-    for (const filePath of [inputs.matrizPath, ...inputs.quizPaths]) {
+    for (const filePath of [inputs.matrizPath, ...inputs.quizzes.map(q => q.filePath)]) {
       if (filePath) fs.rmSync(filePath, { force: true });
     }
     await discardBlobs(inputs.blobUrls);
