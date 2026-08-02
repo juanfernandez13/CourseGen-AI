@@ -19,13 +19,22 @@ type Inputs = {
   blobUrls: string[];
 };
 
-/** Anexos chegam como URLs do Blob (Vercel) ou como o arquivo em si (local). */
-async function collectInputs(req: NextRequest): Promise<Inputs> {
+/**
+ * Anexos chegam como URLs do Blob (Vercel) ou como o arquivo em si (local).
+ *
+ * `assumirBlobs` registra as URLs antes do download, para que uma falha no meio
+ * não deixe blobs órfãos — o `finally` só apaga o que foi registrado.
+ */
+async function collectInputs(
+  req: NextRequest,
+  assumirBlobs: (urls: string[]) => void,
+): Promise<Inputs> {
   const isJson = req.headers.get('content-type')?.includes('application/json');
 
   if (isJson) {
     const body = await req.json();
     const remote: RemoteFile[] = Array.isArray(body?.tarefas) ? body.tarefas.filter(isRemoteFile) : [];
+    assumirBlobs(remote.map(file => file.url));
     return {
       matrizJsonRaw: typeof body?.matrizJson === 'string' ? body.matrizJson : null,
       tarefas: await Promise.all(
@@ -73,7 +82,7 @@ export async function POST(req: NextRequest) {
   let inputs: Inputs = { matrizJsonRaw: null, tarefas: [], blobUrls: [] };
 
   try {
-    inputs = await collectInputs(req);
+    inputs = await collectInputs(req, urls => { inputs.blobUrls = urls; });
 
     if (!inputs.matrizJsonRaw) {
       return NextResponse.json({ error: 'matrizJson não enviado.' }, { status: 400 });

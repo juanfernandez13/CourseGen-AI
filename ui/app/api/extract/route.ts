@@ -42,8 +42,17 @@ type Inputs = {
   blobUrls: string[];
 };
 
-/** Uploads chegam como URLs do Blob (Vercel) ou como o arquivo em si (local). */
-async function collectInputs(req: NextRequest): Promise<Inputs> {
+/**
+ * Uploads chegam como URLs do Blob (Vercel) ou como o arquivo em si (local).
+ *
+ * `assumirBlobs` é chamado assim que as URLs são conhecidas, antes de validar ou
+ * baixar. Sem isso, uma falha aqui deixaria os blobs órfãos no storage: o
+ * `finally` da rota só apaga o que já tiver sido registrado.
+ */
+async function collectInputs(
+  req: NextRequest,
+  assumirBlobs: (urls: string[]) => void,
+): Promise<Inputs> {
   const isJson = req.headers.get('content-type')?.includes('application/json');
   if (!isJson) return collectFromFormData(req);
 
@@ -52,6 +61,8 @@ async function collectInputs(req: NextRequest): Promise<Inputs> {
   const quizzes = Array.isArray(body?.quizzes) ? body.quizzes.filter(isRemoteFile) : [];
 
   const blobUrls = [...(matriz ? [matriz.url] : []), ...quizzes.map((q: RemoteFile) => q.url)];
+  assumirBlobs(blobUrls);
+
   if (matriz) assertDocx(matriz.name);
   for (const quiz of quizzes) assertDocx(quiz.name);
 
@@ -91,7 +102,7 @@ export async function POST(req: NextRequest) {
 
   let inputs: Inputs = { matrizPath: null, quizzes: [], blobUrls: [] };
   try {
-    inputs = await collectInputs(req);
+    inputs = await collectInputs(req, urls => { inputs.blobUrls = urls; });
     const { matrizPath } = inputs;
 
     /* Número no nome ("Quiz 3", "Questionário 3") define a qual questionário o
