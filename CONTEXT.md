@@ -22,6 +22,18 @@ Browser                          Backend                         Google
 
 O navegador **não chama o Gemini diretamente**. A chave fornecida pela interface é enviada somente ao backend no header `X-Gemini-Key`. Quando esse header não existe, o backend usa `GEMINI_KEY`.
 
+### Dois caminhos de upload
+
+A Vercel rejeita corpo de requisição acima de 4,5 MB na edge, antes da função rodar.
+Com um Blob store conectado (`BLOB_READ_WRITE_TOKEN`), o browser envia os arquivos
+direto ao storage e as rotas recebem apenas URLs; os blobs são apagados assim que o
+processamento termina. Sem o token — o caso local — as rotas recebem o arquivo no
+`FormData`, como antes. Quem decide é `server/blobStore.ts`; a UI consulta
+`/api/health`.
+
+O `.mbz` volta em streaming, não em buffer: resposta não-streamed também tem teto
+na Vercel.
+
 ## Entradas HTTP
 
 ### `POST /api/extract`
@@ -41,6 +53,21 @@ Campos `multipart/form-data`:
 - `tarefas`: anexos opcionais.
 
 Retorna o `.mbz`. Arquivos `tarefa_N.ext` são associados à N-ésima tarefa encontrada.
+
+## Cadastro em lote de alunos
+
+Tela `/cadastro-lote`: planilha (`.xlsx`/`.xls`/`.csv`) → revisão → um CSV por curso.
+
+- `server/planilha.js` lê a planilha com o exceljs; tudo vira string, senão um CPF
+  gravado como número perde o zero à esquerda.
+- `server/alunos.js` tem o prompt, a validação e a montagem do CSV. O Gemini apenas
+  mapeia colunas bagunçadas e separa nome de sobrenome; **CPF e e-mail são validados
+  em código**, incluindo dígito verificador. CPF malformado é copiado como veio e
+  sinalizado, nunca corrigido.
+- Defaults: senha sempre `abcd1234`, cidade ausente vira `Fortaleza`, `type1` aceita
+  só 1 (aluno) ou 2 (professor).
+- A revisão é obrigatória e toda célula é editável. `course1` é do lote inteiro, não
+  por linha, e cada curso da lista gera um arquivo.
 
 ## Módulos do gerador MBZ
 
@@ -73,17 +100,33 @@ server/mbzGenerator/
 - Seção `Avaliações`.
 - Seção `Faltas`.
 - Blocos laterais de professores, agenda e encontros virtuais.
-- Livro de notas com categorias EaD e presencial.
+- Livro de notas com categorias configuráveis.
 - Avaliação final sempre presente.
 
 Atividades suportadas: fórum, quiz, tarefa, chat, wiki e glossário. Chat e wiki usam assigns ocultos para lançamento de nota.
 
+### Livro de notas
+
+`livro_de_notas.categorias` aceita qualquer número de categorias, cada uma com
+`nome`, `peso` e os `tipos` de atividade que recebe. Sem `tipos` declarado vale o
+comportamento histórico por posição (primeira EaD, segunda presencial). Tipo que
+nenhuma categoria reivindica fica na raiz, como a Avaliação Final. Editável na
+revisão, em `app/components/GradebookEditor.tsx`.
+
+O `sortorder` segue o padrão do Moodle: numeração densa, item da categoria
+imediatamente antes dos seus filhos.
+
 ## Associação de arquivos
 
-- Quizzes são associados por ordem aos objetos `aula.quiz`.
+- Quizzes seguem a mesma regra das tarefas: número explícito no nome (`Quiz 3`,
+  `Questionário 3`) vence; sem número, vale a ordem natural do nome. Antes disso a
+  associação dependia da ordem de seleção no navegador, que não é garantida.
 - `Tarefa 1.*`, `tarefa_1.*` ou `tarefa-1.*` são associados pelo número explícito.
 - Arquivos sem número são agrupados pelo mesmo nome-base, ordenados alfabeticamente e associados às posições ainda livres.
 - Anexos usam SHA-1 e `filearea=introattachment` no padrão do Moodle.
+- Na revisão dá para anexar e mover arquivos por bloco. A escolha é gravada como
+  prefixo `tarefa_N__` no próprio nome — a mesma convenção que o mapper resolve —
+  para não criar um segundo mecanismo em paralelo ao do servidor.
 
 ## Comandos
 
@@ -92,6 +135,7 @@ yarn dev
 yarn test
 yarn build
 yarn start
+yarn prompt   # imprime o prompt de extração com um exemplo de saída
 ```
 
 Dependências ficam em `ui/`. Os scripts da raiz delegam para essa pasta.
@@ -100,6 +144,7 @@ Dependências ficam em `ui/`. Os scripts da raiz delegam para essa pasta.
 
 ```env
 GEMINI_KEY=sua_chave
+BLOB_READ_WRITE_TOKEN=...   # opcional; sem ele o upload é direto para as rotas
 ```
 
 A chave também pode ser configurada no navegador. O modelo atual está definido em `server/extractor.js`.

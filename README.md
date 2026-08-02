@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/CourseGen-AI-6366f1?style=for-the-badge&logo=sparkles&logoColor=white" alt="CourseGen AI" />
   <img src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js" />
-  <img src="https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white" />
+  <img src="https://img.shields.io/badge/Gemini-3_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white" />
   <img src="https://img.shields.io/badge/Moodle-MBZ-f98012?style=for-the-badge&logo=moodle&logoColor=white" />
 </p>
 
@@ -17,7 +17,7 @@
 
 **CourseGen AI** é uma aplicação web que converte automaticamente a **Matriz DE** (documento de planejamento de disciplinas do IFCE, em `.docx`) em arquivos de backup Moodle (`.mbz`), prontos para importação na plataforma.
 
-Todo o processo de leitura, interpretação e estruturação do conteúdo é feito pelo modelo **Google Gemini 2.5 Flash**, eliminando horas de trabalho manual de cadastro no Moodle.
+Todo o processo de leitura, interpretação e estruturação do conteúdo é feito pelo modelo **Google Gemini 3 Flash**, eliminando horas de trabalho manual de cadastro no Moodle.
 
 ---
 
@@ -30,6 +30,8 @@ Todo o processo de leitura, interpretação e estruturação do conteúdo é fei
 - **Editor de revisão** — visualize e edite o JSON extraído antes de gerar o pacote
 - **Builder manual** — crie a estrutura da disciplina do zero, sem precisar de documentos
 - **Geração completa de MBZ** — gera o XML compatível com o formato Moodle 2.x com seções, fóruns, quizzes, tarefas, wikis, glossários, chats e encontros
+- **Cadastro em lote de alunos** — converte a planilha da turma em CSV de importação do Moodle, com validação de CPF e e-mail e revisão antes de gerar
+- **Livro de notas configurável** — categorias, pesos e quais atividades entram em cada uma
 - **Tema claro/escuro** — interface responsiva com suporte a modo escuro nativo
 
 ---
