@@ -55,7 +55,9 @@ Suba a Matriz DE       Revise e edite o        Baixe o .mbz e
 | Estilização | Tailwind CSS v4 |
 | IA | Google Gemini (`@google/genai`, chamada no backend) |
 | Leitura de DOCX | mammoth.js |
+| Leitura de planilhas | exceljs (`.xlsx`/`.xls`) + parser próprio de CSV |
 | Geração de MBZ | archiver.js + XML programático |
+| Uploads grandes | Vercel Blob (`@vercel/blob`), com envio direto do browser |
 | Utilitários | uuid, jsonrepair, pdfjs-dist |
 
 ---
@@ -72,8 +74,8 @@ Suba a Matriz DE       Revise e edite o        Baixe o .mbz e
 
 ```bash
 # Clone o repositório
-git clone https://github.com/seu-usuario/coursegen-ai.git
-cd coursegen-ai/ui
+git clone git@github.com:juanfernandez13/CourseGen-AI.git
+cd CourseGen-AI/ui
 
 # Instale as dependências
 yarn install
@@ -93,28 +95,40 @@ Acesse em [http://localhost:3000](http://localhost:3000).
 
 ```
 .
+├── AGENTS.md                   # Instruções para agentes de IA (CLAUDE.md importa)
 ├── ui/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── extract/       # Extração da Matriz e quizzes via Gemini
-│   │   │   └── generate/      # Geração do arquivo .mbz
+│   │   │   ├── extract/        # Matriz e quizzes → JSON, via Gemini
+│   │   │   ├── generate/       # JSON + anexos → .mbz (resposta em stream)
+│   │   │   ├── alunos/         # extract: planilha → registros; csv: um por curso
+│   │   │   ├── blob-upload/    # Assina o upload direto do browser
+│   │   │   ├── prompt/         # Prompt de extração + exemplo, para outra IA
+│   │   │   └── health/         # Chave do servidor e Blob disponíveis?
+│   │   ├── cadastro-lote/      # Tela de cadastro em lote de alunos
 │   │   ├── components/
-│   │   │   ├── UploadStep     # Passo 1 — upload de arquivos
-│   │   │   ├── ReviewStep     # Passo 2 — revisão do JSON
-│   │   │   ├── BuilderStep    # Modo manual de criação
-│   │   │   └── DoneStep       # Passo 3 — confirmação de download
+│   │   │   ├── UploadStep      # Passo 1 — upload de arquivos
+│   │   │   ├── ReviewStep      # Passo 2 — revisão do JSON
+│   │   │   ├── GradebookEditor # Categorias e pesos do livro de notas
+│   │   │   ├── BuilderStep     # Modo manual de criação
+│   │   │   └── DoneStep        # Passo 3 — confirmação de download
 │   │   └── lib/
-│   │       ├── api.ts         # Funções de fetch para as rotas
-│   │       └── useJsonHistory # Histórico local de extrações
+│   │       ├── api.ts          # Funções de fetch para as rotas
+│   │       ├── uploads.ts      # Envio direto ao Blob quando há store
+│   │       └── useJsonHistory  # Histórico local de extrações
 │   └── server/
-│       ├── extractor.js       # Lógica de chamada ao Gemini
-│       ├── parser.js          # Leitura de DOCX com mammoth
+│       ├── extractor.js        # Prompts e chamadas ao Gemini
+│       ├── parser.js           # Leitura de DOCX com mammoth
+│       ├── planilha.js         # Leitura de XLSX/CSV
+│       ├── alunos.js           # Validação de CPF/e-mail e montagem do CSV
+│       ├── taskFileMapper.js   # Associa arquivos a tarefas e quizzes pelo nome
+│       ├── blobStore.ts        # Adapter do Vercel Blob
 │       └── mbzGenerator/
-│           ├── index.js       # Ciclo de vida do pipeline MBZ
-│           ├── model.js       # Normalização e IDs do Moodle
+│           ├── index.js        # Ciclo de vida do pipeline MBZ
+│           ├── model.js        # Normalização, categorias e IDs do Moodle
 │           ├── activityWriter.js # Escrita das atividades
-│           ├── builders.js    # Construtores de XML Moodle
-│           └── utils.js       # Helpers de XML, SHA1 e datas
+│           ├── builders.js     # Construtores de XML Moodle
+│           └── utils.js        # Helpers de XML, SHA1 e datas
 └── package.json
 ```
 
@@ -124,4 +138,13 @@ Acesse em [http://localhost:3000](http://localhost:3000).
 
 | Variável | Descrição |
 |---|---|
-| `GEMINI_KEY` | Chave de API do Google Gemini (obrigatória) |
+| `GEMINI_KEY` | Chave do Google Gemini. Opcional se cada usuário informar a sua na interface |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob. Sem ele, os arquivos vão direto para as rotas — o que basta em desenvolvimento, onde não existe o limite de 4,5 MB da Vercel |
+
+---
+
+## Importando no Moodle
+
+Restaure o `.mbz` num **curso novo e vazio**, marcando *"sobrescrever a configuração
+do curso"*. Ao mesclar num curso já existente, o Moodle não recria as categorias do
+livro de notas e as atividades aparecem soltas na raiz.

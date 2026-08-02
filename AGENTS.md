@@ -79,6 +79,17 @@ problema é a restauração, não o arquivo: é preciso restaurar num **curso no
 vazio**, marcando **"sobrescrever a configuração do curso"**. Isso já foi
 diagnosticado e confirmado — não reinvestigar o gerador por causa desse sintoma.
 
+## Commits
+
+- **Não se coloque como coautor.** Nada de `Co-Authored-By:` apontando para a IA,
+  nem assinatura ou marca d'água na mensagem. O commit é do autor humano.
+- Mensagem em inglês, no estilo do histórico (`feat:`, `fix:`, `docs:`).
+- Explique **por que**, não o que o diff já mostra. Quando algo foi descartado
+  como hipótese, registre — poupa a próxima investigação.
+- Antes de commitar, confira que nenhum `.mbz`, `.env` ou planilha entrou: são
+  arquivos que aparecem no diretório durante o uso normal e alguns têm dezenas
+  de MB.
+
 ## Testes
 
 `yarn test` roda `node --test` sobre `server/`. **A UI não tem cobertura
