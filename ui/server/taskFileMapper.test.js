@@ -133,3 +133,32 @@ test('lacuna na numeração preserva as posições declaradas', () => {
   assert.equal(mapped[4][0].name, 'Quiz 4.docx');
   assert.equal(mapped[2], undefined);
 });
+
+/* ─── Mover arquivo de tarefa na revisão ──────────────────────────────────
+ * A tela reetiqueta com o prefixo "tarefa_N__". Estes testes garantem que
+ * mover não empilha prefixos nem se confunde com o número do nome original. */
+
+const PREFIXO_MANUAL = /^tarefa[\s_-]*\d+__/i;
+const mover = (nome, n) => `tarefa_${n}__${nome.replace(PREFIXO_MANUAL, '')}`;
+
+test('mover vence o número que já existia no nome original', () => {
+  const movido = mover('4.Tarefa_1-_Aula_1.docx', 5);
+  assert.equal(Number(Object.keys(mapTaskFiles([{ name: movido }]))[0]), 5);
+});
+
+test('mover duas vezes troca o destino sem empilhar prefixo', () => {
+  const duasVezes = mover(mover('4.Tarefa_1-_Aula_1.docx', 5), 2);
+
+  assert.equal(duasVezes, 'tarefa_2__4.Tarefa_1-_Aula_1.docx');
+  assert.equal(Number(Object.keys(mapTaskFiles([{ name: duasVezes }]))[0]), 2);
+});
+
+test('mover um arquivo não arrasta os outros da mesma tarefa', () => {
+  const mapped = mapTaskFiles([
+    { name: mover('7._Tarefa_4_-_Aula_4.docx', 1) },
+    { name: '7.1_Tarefa_4_-_Aula_4.pdf' },
+  ]);
+
+  assert.equal(mapped[1][0].name, 'tarefa_1__7._Tarefa_4_-_Aula_4.docx');
+  assert.equal(mapped[4][0].name, '7.1_Tarefa_4_-_Aula_4.pdf');
+});

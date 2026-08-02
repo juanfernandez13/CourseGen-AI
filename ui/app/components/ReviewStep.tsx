@@ -217,11 +217,14 @@ function AnexarTarefaButton({ tarefaNumero, onAttach, label }: {
 type TarefaAnexoProps = {
   /** Posição da tarefa na contagem global — é o que o servidor usa. */
   tarefaNumero: number;
+  /** Quantas tarefas existem no JSON, para as opções de destino. */
+  totalTarefas: number;
   onAttach: (files: File[]) => void;
   onDetach: (file: File) => void;
+  onMove: (file: File, destino: number) => void;
 };
 
-function AulaModal({ aula, tarefaFiles, onClose, tarefaNumero, onAttach, onDetach }: {
+function AulaModal({ aula, tarefaFiles, onClose, tarefaNumero, totalTarefas, onAttach, onDetach, onMove }: {
   aula: Aula; tarefaFiles: File[]; onClose: () => void;
 } & TarefaAnexoProps) {
   const [viewFile, setViewFile] = useState<File | null>(null);
@@ -382,6 +385,21 @@ function AulaModal({ aula, tarefaFiles, onClose, tarefaNumero, onAttach, onDetac
                             <span className="text-xs" style={{ color: 'var(--text-4)' }}>
                               {(f.size / 1024).toFixed(0)} KB
                             </span>
+                            {/* Se a associação automática errou, move o arquivo
+                                para outra tarefa sem precisar reenviar. */}
+                            <select
+                              value={tarefaNumero}
+                              onChange={e => onMove(f, Number(e.target.value))}
+                              title="Mover este arquivo para outra tarefa"
+                              className="rounded-md px-1 py-0.5 text-xs shrink-0"
+                              style={{ background: 'var(--bg)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+                            >
+                              {Array.from({ length: totalTarefas }, (_, n) => n + 1).map(n => (
+                                <option key={n} value={n}>
+                                  {n === tarefaNumero ? `Tarefa ${n}` : `→ Tarefa ${n}`}
+                                </option>
+                              ))}
+                            </select>
                             <button
                               onClick={() => onDetach(f)}
                               title="Remover este arquivo da tarefa"
@@ -459,7 +477,7 @@ function AulaModal({ aula, tarefaFiles, onClose, tarefaNumero, onAttach, onDetac
 }
 
 /* ─── Aula Card ──────────────────────────────────────────────────────────── */
-function AulaCard({ aula, tarefaFiles, tarefaNumero, onAttach, onDetach }: {
+function AulaCard({ aula, tarefaFiles, tarefaNumero, totalTarefas, onAttach, onDetach, onMove }: {
   aula: Aula; tarefaFiles: File[];
 } & TarefaAnexoProps) {
   const [open, setOpen] = useState(false);
@@ -511,8 +529,10 @@ function AulaCard({ aula, tarefaFiles, tarefaNumero, onAttach, onDetach }: {
           tarefaFiles={tarefaFiles}
           onClose={() => setOpen(false)}
           tarefaNumero={tarefaNumero}
+          totalTarefas={totalTarefas}
           onAttach={onAttach}
           onDetach={onDetach}
+          onMove={onMove}
         />
       )}
     </>
@@ -520,16 +540,18 @@ function AulaCard({ aula, tarefaFiles, tarefaNumero, onAttach, onDetach }: {
 }
 
 /* ─── Visual View ────────────────────────────────────────────────────────── */
-function VisualView({ data, tarefaMap, onAttach, onDetach }: {
+function VisualView({ data, tarefaMap, onAttach, onDetach, onMove }: {
   data: MatrizData;
   tarefaMap: Record<number, File[]>;
   onAttach: (files: File[]) => void;
   onDetach: (file: File) => void;
+  onMove: (file: File, destino: number) => void;
 }) {
   const aulas = data.aulas ?? [];
 
   // Assign tarefa files to each aula by count order (same logic as server.js)
   let tarefaCounter = 0;
+  const totalTarefas = aulas.filter(a => a.tarefa).length;
   const aulaTarefa: { numero: number; files: File[] }[] = aulas.map(aula => {
     if (aula.tarefa) {
       tarefaCounter++;
@@ -608,8 +630,10 @@ function VisualView({ data, tarefaMap, onAttach, onDetach }: {
               aula={aula}
               tarefaFiles={aulaTarefa[i].files}
               tarefaNumero={aulaTarefa[i].numero}
+              totalTarefas={totalTarefas}
               onAttach={onAttach}
               onDetach={onDetach}
+              onMove={onMove}
             />
           ))}
         </div>
@@ -685,6 +709,13 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
 
   function handleDetach(alvo: File) {
     onTarefaFilesChange?.(prev => prev.filter(f => f !== alvo));
+  }
+
+  /* Mover é reetiquetar: o prefixo "tarefa_N__" é o que o servidor lê, então
+   * trocar o destino é trocar o número, sem mecanismo paralelo. */
+  function handleMove(alvo: File, destino: number) {
+    onTarefaFilesChange?.(prev =>
+      prev.map(f => (f === alvo ? assignToTarefa(f, destino) : f)));
   }
 
   return (
@@ -798,7 +829,7 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
 
       {/* Content */}
       {view === 'visual' && data  && (
-        <VisualView data={data} tarefaMap={tarefaMap} onAttach={handleAttach} onDetach={handleDetach} />
+        <VisualView data={data} tarefaMap={tarefaMap} onAttach={handleAttach} onDetach={handleDetach} onMove={handleMove} />
       )}
       {view === 'visual' && !data && (
         <div className="flex flex-col items-center justify-center py-20 rounded-xl"
