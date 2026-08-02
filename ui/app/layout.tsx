@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider, ThemeToggle } from './components/ThemeProvider';
 import SettingsButton from './components/SettingsButton';
+import HeaderNav from './components/HeaderNav';
 
 export const metadata: Metadata = {
   title: 'CourseGen AI',
@@ -45,28 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </span>
             </div>
 
-            {/* Nav links (purely visual; single page app) */}
-            <nav className="hidden sm:flex items-center gap-0.5 text-[12.5px]">
-              {[
-                { label: 'Disciplinas', active: true },
-                { label: 'Nova',        active: false },
-                { label: 'Templates',   active: false },
-                { label: 'Atividade',   active: false },
-              ].map(({ label, active }) => (
-                <button
-                  key={label}
-                  type="button"
-                  className="px-2.5 py-1.5 rounded-[5px] transition-colors"
-                  style={{
-                    background: active ? 'var(--surface-3)' : 'transparent',
-                    color:      active ? 'var(--ink)'        : 'var(--ink-2)',
-                    fontWeight: active ? 500 : 400,
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </nav>
+            <HeaderNav />
 
             {/* Right utilities */}
             <div className="ml-auto flex items-center gap-2.5">
