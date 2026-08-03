@@ -20,6 +20,10 @@ export const CIDADE_PADRAO: string;
 
 export function cpfTemDigitoValido(cpf: string): boolean;
 export function emailValido(email: string): boolean;
+
+/** A linha 1 é dado, e não cabeçalho? Só responde `true` com certeza. */
+export function primeiraLinhaEhDado(rows: string[][]): boolean;
+export function montarPromptAlunos(rows: string[][]): string;
 export function normalizarAluno(bruto: unknown): Aluno;
 export function normalizarAlunos(brutos: unknown): Aluno[];
 export function extrairAlunos(rows: string[][], apiKey: string): Promise<Aluno[]>;

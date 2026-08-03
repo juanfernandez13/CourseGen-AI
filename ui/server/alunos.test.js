@@ -176,3 +176,65 @@ test('nome de arquivo tira acento e caractere especial', () => {
   const [arquivo] = montarCsvPorCurso(TURMA, ['Informática/EAD'], 'turma');
   assert.equal(arquivo.filename, 'turma_Informatica_EAD.csv');
 });
+
+/* ─── Planilha sem cabeçalho ────────────────────────────────────────────── */
+
+const { primeiraLinhaEhDado, montarPromptAlunos } = require('./alunos');
+
+test('linha de rótulos não é reconhecida como dado', () => {
+  assert.equal(primeiraLinhaEhDado([['nome', 'cpf', 'email', 'cidade']]), false);
+  assert.equal(primeiraLinhaEhDado([['Aluno', 'CPF', 'E-mail']]), false);
+});
+
+test('linha com CPF válido é dado, mesmo parecendo cabeçalho', () => {
+  assert.equal(primeiraLinhaEhDado([['Ana Souza', '529.982.247-25', 'ana@ifce.edu.br']]), true);
+  // sem e-mail, só o CPF já basta
+  assert.equal(primeiraLinhaEhDado([['Ana Souza', '52998224725', '']]), true);
+});
+
+test('linha com e-mail é dado mesmo sem CPF válido', () => {
+  assert.equal(primeiraLinhaEhDado([['Ana Souza', '', 'ana@ifce.edu.br']]), true);
+});
+
+test('CPF inválido sozinho não decide — fica para a IA avaliar', () => {
+  assert.equal(primeiraLinhaEhDado([['Ana Souza', '12345678901', 'sem-arroba']]), false);
+});
+
+test('entrada vazia ou malformada não quebra', () => {
+  assert.equal(primeiraLinhaEhDado([]), false);
+  assert.equal(primeiraLinhaEhDado(null), false);
+  assert.equal(primeiraLinhaEhDado(['nao-e-array']), false);
+});
+
+test('o prompt não manda mais descartar a linha 1 incondicionalmente', () => {
+  const prompt = montarPromptAlunos([['nome', 'cpf'], ['Ana Souza', '529.982.247-25']]);
+  assert.ok(!/Ignore a linha de cabeçalho/.test(prompt));
+  assert.ok(/AVALIE a linha 1/.test(prompt));
+});
+
+test('sem cabeçalho, o prompt afirma que a linha 1 é aluno', () => {
+  const prompt = montarPromptAlunos([
+    ['Ana Souza', '529.982.247-25', 'ana@ifce.edu.br'],
+    ['Bruno Lima', '111.444.777-35', 'bruno@ifce.edu.br'],
+  ]);
+
+  assert.ok(/Ela É um aluno/.test(prompt), 'o veredito determinístico entra no prompt');
+  assert.ok(/"cabecalho": false/.test(prompt));
+});
+
+test('com cabeçalho, o prompt pede avaliação em vez de afirmar', () => {
+  const prompt = montarPromptAlunos([['nome', 'cpf'], ['Ana Souza', '529.982.247-25']]);
+
+  assert.ok(/não conclui nada sozinho/.test(prompt));
+  assert.ok(!/Ela É um aluno/.test(prompt));
+});
+
+test('o prompt leva todas as linhas numeradas, inclusive a primeira', () => {
+  const prompt = montarPromptAlunos([
+    ['Ana Souza', '529.982.247-25'],
+    ['Bruno Lima', '111.444.777-35'],
+  ]);
+
+  assert.ok(/1: Ana Souza \| 529\.982\.247-25/.test(prompt));
+  assert.ok(/2: Bruno Lima \| 111\.444\.777-35/.test(prompt));
+});

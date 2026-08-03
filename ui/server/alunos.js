@@ -23,11 +23,13 @@ const COLUNAS_CSV = [
 ];
 
 const PROMPT_ALUNOS = `Você recebe as linhas de uma planilha de alunos. As colunas variam e podem
-estar com nomes errados, fora de ordem ou combinadas. Interprete e devolve SOMENTE JSON válido,
-sem markdown e sem explicações.
+estar com nomes errados, fora de ordem ou combinadas. A planilha PODE NÃO TER CABEÇALHO — nesse
+caso a linha 1 já é um aluno. Interprete e devolve SOMENTE JSON válido, sem markdown e sem
+explicações.
 
 Schema:
 {
+  "cabecalho": true se a linha 1 for rótulo de coluna, false se ela já for um aluno,
   "alunos": [
     {
       "cpf": "somente os dígitos do CPF, sem pontos nem traços",
@@ -43,7 +45,16 @@ Schema:
 }
 
 Regras:
-- Ignore a linha de cabeçalho. Cada linha restante com dados vira um item.
+- AVALIE a linha 1 antes de qualquer outra coisa. Ela pode ser cabeçalho ("CPF", "Nome",
+  "E-mail", "Aluno", "Matrícula"…) ou já ser o primeiro aluno. Descarte-a APENAS se for rótulo de
+  coluna. Se ela contiver dados de uma pessoa, ela é um aluno e precisa aparecer no resultado —
+  perder o primeiro aluno em silêncio é o pior erro possível aqui.
+- Uma linha é cabeçalho quando suas células nomeiam campos em vez de conter valores. Ela não tem
+  CPF com 11 dígitos, não tem endereço com "@" e não tem nome de pessoa.
+- Sem cabeçalho, deduza o papel de cada coluna pelo CONTEÚDO, coluna a coluna: 11 dígitos (com ou
+  sem pontuação) é CPF; texto com "@" é e-mail; dois ou mais nomes próprios é o nome da pessoa;
+  nome de município é a cidade. Aplique a mesma leitura a todas as linhas.
+- Cada linha com dados vira exatamente um item, inclusive a linha 1 quando ela não for cabeçalho.
 - NUNCA invente, corrija ou complete um CPF. Copie os dígitos como estão, mesmo que sobrem ou
   faltem. Se a linha não tiver CPF algum, use null e explique em "observacao".
 - NUNCA invente um e-mail. Copie como está. Se não houver, use null.
@@ -54,8 +65,6 @@ Regras:
 - "course1": copie o que estiver na planilha. Se não houver coluna de curso, use null.
 - "type1": use 1 para aluno e 2 para professor/tutor/docente. Na dúvida, use 1.
 - Não repita linhas nem crie alunos que não estejam na planilha.
-
-Linhas da planilha:
 `;
 
 /* ─── Validação determinística ──────────────────────────────────────────── */
@@ -156,12 +165,47 @@ function normalizarAlunos(brutos) {
 
 /* ─── Extração ──────────────────────────────────────────────────────────── */
 
+/**
+ * A primeira linha é dado, e não cabeçalho?
+ *
+ * Nenhum cabeçalho traz um CPF com dígito verificador válido ou um e-mail bem
+ * formado — são valores, não rótulos. Quando um deles aparece na linha 1, a
+ * resposta é certa e não precisa passar pelo modelo. A recíproca não vale: a
+ * ausência não prova que é cabeçalho (a planilha pode começar por um aluno sem
+ * CPF), e aí a avaliação fica com a IA.
+ */
+function primeiraLinhaEhDado(rows) {
+  const primeira = Array.isArray(rows) ? rows[0] : null;
+  if (!Array.isArray(primeira)) return false;
+
+  return primeira.some(celula => {
+    const digitos = somenteDigitos(celula);
+    return (digitos.length === 11 && cpfTemDigitoValido(digitos)) || emailValido(celula);
+  });
+}
+
+/**
+ * Monta o prompt com o veredito determinístico sobre a linha 1.
+ *
+ * O modelo avalia, mas quando o código tem certeza ele não deixa margem: pedir
+ * para "avaliar" uma linha que comprovadamente contém um CPF válido é convidar
+ * o modelo a errar e descartar o primeiro aluno sem que nada falhe.
+ */
+function montarPromptAlunos(rows) {
+  const veredito = primeiraLinhaEhDado(rows)
+    ? 'Verificação automática: a linha 1 contém um CPF com dígito verificador válido ou um e-mail '
+      + 'bem formado. Nenhum cabeçalho tem isso. Ela É um aluno — inclua-a e use "cabecalho": false.'
+    : 'Verificação automática: a linha 1 não traz CPF válido nem e-mail bem formado. Isso é comum '
+      + 'em cabeçalho, mas não conclui nada sozinho — avalie o conteúdo dela antes de descartar.';
+
+  return `${PROMPT_ALUNOS}\n${veredito}\n\nLinhas da planilha:\n${planilhaParaTexto(rows)}`;
+}
+
 async function extrairAlunos(rows, apiKey) {
   const { GoogleGenAI } = require('@google/genai');
   const ai = new GoogleGenAI({ apiKey });
 
-  const texto = planilhaParaTexto(rows);
-  const response = await geminiGenerate(ai, `${PROMPT_ALUNOS}${texto}`);
+  const response = await geminiGenerate(ai, montarPromptAlunos(rows));
   const dados = safeParseJSON(cleanJSON(response.text), 'alunos');
 
   return normalizarAlunos(dados?.alunos);
@@ -222,6 +266,8 @@ module.exports = {
   PROMPT_ALUNOS,
   cpfTemDigitoValido,
   emailValido,
+  primeiraLinhaEhDado,
+  montarPromptAlunos,
   normalizarAluno,
   normalizarAlunos,
   extrairAlunos,
