@@ -26,7 +26,20 @@ ui/server/    núcleo (CommonJS + .d.ts escritos à mão)
   taskFileMapper.js associa arquivos a tarefas/quizzes pelo nome
   blobStore.ts      adapter do Vercel Blob
   mbzGenerator/     geração do pacote Moodle
+  moodle/           edição de datas em turmas já publicadas (aba "Datas das aulas")
 ```
+
+## Variáveis de ambiente
+
+| Variável | Obrigatória | Para quê |
+|---|---|---|
+| `GEMINI_KEY` | fallback | usada quando a requisição não traz `X-Gemini-Key` |
+| `BLOB_READ_WRITE_TOKEN` | não | ativa o upload direto para o Vercel Blob |
+| `MOODLE_URL` | não | base do Moodle; sem ela, `https://ead.ifce.edu.br/` |
+| `MOODLE_SESSION_SECRET` | **em produção** | cifra o cookie de sessão do Moodle |
+
+Sem `MOODLE_SESSION_SECRET`, `server/moodle/auth.js` **aborta em produção** e cai
+numa chave efêmera de processo em desenvolvimento (reiniciar derruba as sessões).
 
 ## Invariantes
 
@@ -67,6 +80,36 @@ ui/server/    núcleo (CommonJS + .d.ts escritos à mão)
   número da frente do arquivo **não** é o número da atividade: em
   `4.Tarefa_1-_Aula_1.docx` o `4.` é ordem do documento e o `Tarefa_1` é o que
   vale.
+
+## Aba "Datas das aulas": edição de turmas já publicadas
+
+O gerador cria cursos novos; esta aba edita cursos **que já estão no ar**, por
+HTTP puro — sem Puppeteer. O que a tela do Moodle faz ao salvar uma atividade é
+um POST de formulário, e o formulário inteiro cabe num `fetch`. Chromium não
+caberia no tempo nem no tamanho de uma Vercel Function.
+
+- **Aula N = seção N.** O `cmid` vem do `id="module-N"` e o id da seção do
+  `data-id`, ambos presentes sem ligar o modo de edição.
+- **O `modedit.php` reposta a configuração inteira da atividade.** Campo omitido
+  é ajuste apagado no servidor. Por isso `form.js` reproduz o que o navegador
+  enviaria — ordem dos campos, `disabled`/`file`/botões fora, checkbox só quando
+  marcado, `<select>` sem `selected` na primeira opção. O par `hidden value="0"`
+  + `checkbox value="1"` dos `[enabled]` depende dessa ordem: vence a última
+  ocorrência. Mexer nisso sem teste quebra atividades em silêncio.
+- **Restrições de acesso são um JSON só** (`availabilityconditionsjson`), em
+  atividade e em seção. A condição é achada pela **direção** (`>=` / `<`), nunca
+  pela posição — o bot antigo escolhia pelo índice na tela e editava a errada
+  quando havia mais de uma restrição.
+- **A seção recebe só o início.** Pôr um "até" no bloco esconderia a aula
+  inteira do aluno depois do prazo, inclusive o que ele já entregou.
+- **A cadência vive só em `server/moodle/cadencia.js`.** O servidor recebe datas
+  explícitas por aula e nunca recalcula — duas cópias da regra é como a tela do
+  livro de notas divergiu do gerador.
+- **Uma turma por requisição** (`/api/datas/aplicar`). Cada chamada cabe no
+  limite de duração da função, o progresso aparece turma a turma e uma falha
+  isolada não derruba o lote. Medido: ~2s por alvo (seção ou atividade).
+- **Simular antes de aplicar é obrigatório na tela**, e editar qualquer linha
+  invalida o relatório. Não há desfazer.
 
 ## Moodle: o `.mbz` está correto, a restauração é que exige opção
 

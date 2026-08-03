@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 const LINKS = [
   { href: '/',              label: 'Gerador' },
   { href: '/cadastro-lote', label: 'Cadastro em lote' },
+  { href: '/datas',         label: 'Datas das aulas' },
 ];
 
 export default function HeaderNav() {
