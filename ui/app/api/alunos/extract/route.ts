@@ -50,6 +50,13 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     console.error('Falha ao interpretar a planilha de alunos:', error);
     const bruto = error instanceof Error ? error.message : '';
+
+    // erro de formato já vem redigido para o usuário; repassar é melhor que
+    // trocar por "não foi possível interpretar", que não diz o que fazer
+    if (bruto.includes('Formato de planilha não reconhecido')) {
+      return NextResponse.json({ error: bruto }, { status: 400 });
+    }
+
     const mensagem = bruto.includes('429') || bruto.includes('RESOURCE_EXHAUSTED')
       ? 'O limite de uso do Gemini foi atingido. Tente novamente mais tarde.'
       : bruto.includes('API key') || bruto.includes('401') || bruto.includes('403')

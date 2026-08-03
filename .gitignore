@@ -8,6 +8,7 @@
 *.mbz
 *.pdf
 *.xlsx
+*.xls
 *.csv
 .env
 .env.*
