@@ -19,7 +19,7 @@ const COOKIE = 'moodle_sessao';
 const VALIDADE_S = 2 * 60 * 60; // sessão do Moodle costuma cair antes disso
 const ALGORITMO = 'aes-256-gcm';
 
-let chaveEfemera = null;
+let avisou = false;
 
 function chave() {
   const segredo = process.env.MOODLE_SESSION_SECRET;
@@ -29,13 +29,26 @@ function chave() {
     throw new Error('MOODLE_SESSION_SECRET não configurada — a sessão não pode ser cifrada.');
   }
 
-  // Em desenvolvimento seguimos com uma chave de processo: reiniciar o servidor
-  // derruba as sessões, o que é aceitável e melhor que não cifrar.
-  if (!chaveEfemera) {
-    chaveEfemera = crypto.randomBytes(32);
-    console.warn('[moodle] MOODLE_SESSION_SECRET ausente; usando chave efêmera de desenvolvimento.');
+  /* Desenvolvimento sem segredo configurado.
+   *
+   * A chave é DERIVADA da máquina, não sorteada. Uma chave aleatória guardada
+   * em variável de módulo parece mais segura e na prática quebra o login: o
+   * Next recompila o grafo de módulos da rota editada, cada rota acaba com sua
+   * própria instância deste arquivo, e o cookie cifrado por uma rota vira lixo
+   * para a outra — 401 a cada hot reload, sem explicação visível.
+   *
+   * Isto não protege nada de verdade; é só para não trafegar a sessão do
+   * Moodle em texto claro enquanto se desenvolve. Em produção o caminho acima
+   * é obrigatório. */
+  if (!avisou) {
+    console.warn('[moodle] MOODLE_SESSION_SECRET ausente; usando chave derivada de desenvolvimento.');
+    avisou = true;
   }
-  return chaveEfemera;
+
+  return crypto
+    .createHash('sha256')
+    .update(`coursegen-dev:${require('os').hostname()}:${process.cwd()}`)
+    .digest();
 }
 
 function cifra(dados) {

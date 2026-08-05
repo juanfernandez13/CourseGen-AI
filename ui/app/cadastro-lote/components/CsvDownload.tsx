@@ -1,6 +1,12 @@
 'use client';
 
-export type ArquivoCsv = { curso: string; filename: string; url: string };
+import { useState } from 'react';
+import EnvioMoodle from './EnvioMoodle';
+
+/* `csv` guarda o conteúdo em texto além da object URL: o envio ao Moodle manda
+ * o CSV no corpo da requisição, e ler de volta a partir da URL seria um
+ * caminho a mais para o mesmo dado. */
+export type ArquivoCsv = { curso: string; filename: string; url: string; csv: string };
 
 /* Lista de arquivos gerados. O download não é automático: com vários cursos,
  * disparar tudo de uma vez faria o navegador bloquear parte dos downloads. */
@@ -12,6 +18,8 @@ export default function CsvDownload({
   onDownload: (arquivo: ArquivoCsv) => void;
   onReset: () => void;
 }) {
+  const [enviando, setEnviando] = useState<string | null>(null);
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -33,9 +41,10 @@ export default function CsvDownload({
         {arquivos.map((arquivo, i) => (
           <div
             key={arquivo.filename}
-            className="flex flex-wrap items-center gap-3 px-4 py-3"
+            className="px-4 py-3"
             style={{ borderTop: i === 0 ? 'none' : '1px solid var(--line)' }}
           >
+          <div className="flex flex-wrap items-center gap-3">
             <div
               className="grid h-8 w-8 place-items-center rounded-[4px] shrink-0 font-mono-ui text-[8px] font-bold"
               style={{ background: 'var(--accent-soft)', color: '#34d399' }}
@@ -59,6 +68,19 @@ export default function CsvDownload({
             >
               baixar
             </button>
+
+            <button
+              onClick={() => setEnviando(enviando === arquivo.filename ? null : arquivo.filename)}
+              className="rounded-md px-3 py-1.5 text-[12px] shrink-0"
+              style={{ background: 'var(--surface-3)', color: 'var(--ink)', border: '1px solid var(--line)' }}
+            >
+              enviar ao Moodle
+            </button>
+          </div>
+
+            {enviando === arquivo.filename && (
+              <EnvioMoodle arquivo={arquivo} onFechar={() => setEnviando(null)} />
+            )}
           </div>
         ))}
       </div>

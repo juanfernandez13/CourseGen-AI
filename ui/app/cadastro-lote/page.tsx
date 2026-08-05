@@ -88,6 +88,7 @@ export default function CadastroLote() {
       setArquivos((gerados as { curso: string; filename: string; csv: string }[]).map(a => ({
         curso: a.curso,
         filename: a.filename,
+        csv: a.csv,
         url: URL.createObjectURL(new Blob([a.csv], { type: 'text/csv;charset=utf-8' })),
       })));
       setStep('done');

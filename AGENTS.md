@@ -111,6 +111,46 @@ caberia no tempo nem no tamanho de uma Vercel Function.
 - **Simular antes de aplicar é obrigatório na tela**, e editar qualquer linha
   invalida o relatório. Não há desfazer.
 
+## Cadastro em lote: enviar o CSV direto ao Moodle
+
+Botão na tela de download do Cadastro em lote, atrás do mesmo login da aba de
+Datas. Vai para `admin/tool/uploaduser`, em quatro saltos:
+
+```
+GET  uploaduser/index.php   → sesskey + itemid de uma área de rascunho
+POST repository_ajax.php    → o CSV entra NO RASCUNHO (multipart)
+POST uploaduser/index.php   → passo 1, referenciando o itemid
+POST uploaduser/index.php   → passo 2; só AQUI usuários são criados
+```
+
+- **`userfile` não é o arquivo, é o id do rascunho.** E o passo 2 não reenvia o
+  CSV: referencia o `iid` do arquivo já interpretado.
+- **O formulário do passo 2 muda conforme as colunas do CSV.** Com coluna
+  `password` o Moodle acrescenta `uuforcepasswordchange` e os `uulegacy*`; sem
+  ela esses campos não existem. Por isso as opções são aplicadas sobre o
+  formulário lido — `confirma()` nunca define campo que não veio.
+- **A página tem três formulários com o mesmo `action`.** O que vale é o que
+  contém `uutype`; pegar o primeiro traz o de admin, com dois campos.
+- **Valores usados no IFCE**, conferidos contra o `ead.ifce.edu.br`:
+  `uutype=2`, `uupasswordnew=1`, `uuupdatetype=2`, `uupasswordold=1`,
+  `uuforcepasswordchange=2`, `delimiter_name=comma`.
+- **A coluna "Status" da prévia só fala quando há problema** ("E-mail
+  duplicado", por exemplo). Para linha sem conflito ela volta vazia, inclusive
+  quando o usuário já existe — a prévia **não** distingue novo de existente, e
+  não adianta procurar defeito no parser. O desfecho por aluno só aparece
+  **depois** de confirmar, na tabela de resultado, cuja primeira coluna traz
+  "Novo usuário" / "Usuário atualizado". É de lá que saem as contagens; não
+  existe "Usuários criados: N" na página.
+
+## `MOODLE_SESSION_SECRET` em desenvolvimento
+
+Sem a variável, `server/moodle/auth.js` deriva a chave de `hostname + cwd`.
+Já foi uma chave aleatória por processo, e **quebrava o login a cada hot
+reload**: o Next recompila o grafo da rota editada, cada rota fica com sua
+própria instância do módulo, e o cookie cifrado por uma vira lixo para a outra —
+401 instantâneo, sem erro visível. Chave derivada é estável entre instâncias.
+Em produção a variável continua obrigatória e o módulo aborta sem ela.
+
 ## Moodle: o `.mbz` está correto, a restauração é que exige opção
 
 Categorias do livro de notas aparecem em **dois** lugares e em nenhum outro:
