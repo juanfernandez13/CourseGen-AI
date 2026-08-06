@@ -38,8 +38,14 @@ ui/server/    núcleo (CommonJS + .d.ts escritos à mão)
 | `MOODLE_URL` | não | base do Moodle; sem ela, `https://ead.ifce.edu.br/` |
 | `MOODLE_SESSION_SECRET` | **em produção** | cifra o cookie de sessão do Moodle |
 
-Sem `MOODLE_SESSION_SECRET`, `server/moodle/auth.js` **aborta em produção** e cai
-numa chave efêmera de processo em desenvolvimento (reiniciar derruba as sessões).
+Há um `ui/.env.example` com todas elas e como gerar o segredo.
+
+**Deploy sem `MOODLE_SESSION_SECRET` compila e sobe** — a checagem é em tempo de
+requisição, não de build. As telas que falam com o Moodle respondem **503** com
+a instrução de configurar a variável; o resto do app segue normal. `configurado()`
+é chamada **antes** de autenticar: a versão anterior só estourava ao gravar o
+cookie, ou seja, depois de já ter usado a senha do usuário para logar no Moodle
+de verdade, devolvendo um erro que parecia de credencial.
 
 ## Invariantes
 

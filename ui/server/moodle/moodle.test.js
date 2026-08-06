@@ -324,3 +324,43 @@ test('range invertido ou incompleto não gera linhas', () => {
   assert.deepEqual(montaLinhas({ ...base, aulaInicio: 5, aulaFim: 2 }), []);
   assert.deepEqual(montaLinhas({ ...base, aulaInicio: NaN, aulaFim: 3 }), []);
 });
+
+/* ---------- configuração obrigatória em produção ---------- */
+
+const { configurado } = require('./auth');
+
+function comAmbiente(valores, executa) {
+  const anterior = { NODE_ENV: process.env.NODE_ENV, MOODLE_SESSION_SECRET: process.env.MOODLE_SESSION_SECRET };
+  Object.assign(process.env, valores);
+  for (const [k, v] of Object.entries(valores)) if (v === undefined) delete process.env[k];
+  try { return executa(); } finally { Object.assign(process.env, anterior); }
+}
+
+test('em produção sem MOODLE_SESSION_SECRET, configurado() reprova e diz o que fazer', () => {
+  const r = comAmbiente({ NODE_ENV: 'production', MOODLE_SESSION_SECRET: undefined }, configurado);
+
+  assert.equal(r.ok, false);
+  assert.match(r.motivo, /MOODLE_SESSION_SECRET/);
+  assert.match(r.motivo, /Environment Variables/, 'a mensagem precisa dizer onde configurar');
+});
+
+test('segredo curto demais é recusado em produção', () => {
+  const r = comAmbiente({ NODE_ENV: 'production', MOODLE_SESSION_SECRET: 'abc' }, configurado);
+  assert.equal(r.ok, false);
+  assert.match(r.motivo, /pelo menos 16/);
+});
+
+test('segredo só de espaços conta como ausente', () => {
+  const r = comAmbiente({ NODE_ENV: 'production', MOODLE_SESSION_SECRET: '        ' }, configurado);
+  assert.equal(r.ok, false);
+});
+
+test('com segredo adequado em produção, aprova', () => {
+  const r = comAmbiente({ NODE_ENV: 'production', MOODLE_SESSION_SECRET: 'x'.repeat(64) }, configurado);
+  assert.deepEqual(r, { ok: true });
+});
+
+test('em desenvolvimento não exige nada — a chave derivada resolve', () => {
+  const r = comAmbiente({ NODE_ENV: 'development', MOODLE_SESSION_SECRET: undefined }, configurado);
+  assert.deepEqual(r, { ok: true });
+});

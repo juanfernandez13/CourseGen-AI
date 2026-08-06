@@ -19,15 +19,44 @@ const COOKIE = 'moodle_sessao';
 const VALIDADE_S = 2 * 60 * 60; // sessão do Moodle costuma cair antes disso
 const ALGORITMO = 'aes-256-gcm';
 
+const MINIMO_SEGREDO = 16;
+
+const FALTA_SEGREDO =
+  'MOODLE_SESSION_SECRET não está configurada no servidor. '
+  + 'Defina essa variável de ambiente (no painel da Vercel, em Settings → '
+  + 'Environment Variables) com pelo menos 16 caracteres e faça um novo deploy. '
+  + 'Sem ela a sessão do Moodle não pode ser cifrada.';
+
+/**
+ * Diz se dá para cifrar sessões, sem lançar. As rotas checam ANTES de pedir
+ * qualquer coisa ao Moodle: se falhar só na hora de gravar o cookie, o usuário
+ * já digitou a senha e já autenticou lá — gasta um login para receber um erro
+ * que nada tem a ver com credencial.
+ *
+ * @returns {{ok: true} | {ok: false, motivo: string}}
+ */
+function configurado() {
+  const segredo = (process.env.MOODLE_SESSION_SECRET ?? '').trim();
+
+  if (process.env.NODE_ENV !== 'production') return { ok: true };
+  if (!segredo) return { ok: false, motivo: FALTA_SEGREDO };
+
+  if (segredo.length < MINIMO_SEGREDO) {
+    return {
+      ok: false,
+      motivo: `MOODLE_SESSION_SECRET tem ${segredo.length} caracteres; use pelo menos ${MINIMO_SEGREDO}.`,
+    };
+  }
+  return { ok: true };
+}
+
 let avisou = false;
 
 function chave() {
   const segredo = process.env.MOODLE_SESSION_SECRET;
   if (segredo) return crypto.createHash('sha256').update(segredo).digest();
 
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('MOODLE_SESSION_SECRET não configurada — a sessão não pode ser cifrada.');
-  }
+  if (process.env.NODE_ENV === 'production') throw new Error(FALTA_SEGREDO);
 
   /* Desenvolvimento sem segredo configurado.
    *
@@ -90,4 +119,4 @@ const opcoesCookie = {
   maxAge: VALIDADE_S,
 };
 
-module.exports = { COOKIE, VALIDADE_S, criaToken, decifra, opcoesCookie };
+module.exports = { COOKIE, VALIDADE_S, criaToken, decifra, opcoesCookie, configurado, FALTA_SEGREDO };

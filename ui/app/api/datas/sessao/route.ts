@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 
 import { Sessao } from '../../../../server/moodle/http';
 import { login, sessaoViva } from '../../../../server/moodle/login';
-import { COOKIE, criaToken, opcoesCookie } from '../../../../server/moodle/auth';
+import { COOKIE, criaToken, opcoesCookie, configurado } from '../../../../server/moodle/auth';
 import { MOODLE_URL, sessaoDoCookie } from '../../../lib/moodleServer';
 
 export const runtime = 'nodejs';
@@ -17,6 +17,12 @@ export const runtime = 'nodejs';
 
 /** Situação atual — a tela usa para decidir entre login e formulário. */
 export async function GET() {
+  // avisa já na abertura da tela, em vez de esperar o usuário tentar entrar
+  const config = configurado();
+  if (!config.ok) {
+    return NextResponse.json({ autenticado: false, configuracao: config.motivo });
+  }
+
   const atual = await sessaoDoCookie();
   if (!atual) return NextResponse.json({ autenticado: false });
 
@@ -32,6 +38,16 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    /* Antes de qualquer coisa: sem chave de cifra não há como guardar a sessão.
+     * Checar aqui evita autenticar no Moodle — gastando um login de verdade —
+     * para só então falhar ao gravar o cookie, com um erro que o usuário leria
+     * como problema de senha. */
+    const config = configurado();
+    if (!config.ok) {
+      console.error('[moodle] configuração ausente:', config.motivo);
+      return NextResponse.json({ error: config.motivo, configuracao: true }, { status: 503 });
+    }
+
     const { usuario, senha } = await req.json();
 
     if (!usuario || !senha) {

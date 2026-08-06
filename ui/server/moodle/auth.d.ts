@@ -18,3 +18,9 @@ export declare const opcoesCookie: {
   path: string;
   maxAge: number;
 };
+
+/** Mensagem única para o caso de a variável faltar, usada nas rotas e nos testes. */
+export declare const FALTA_SEGREDO: string;
+
+/** Checa a configuração sem lançar, para a rota falhar antes de tocar no Moodle. */
+export declare function configurado(): { ok: true } | { ok: false; motivo: string };
