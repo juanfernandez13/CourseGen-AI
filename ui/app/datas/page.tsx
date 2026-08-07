@@ -8,7 +8,7 @@ import Previa from './components/Previa';
 import { montaLinhas } from './lib/cadencia';
 import type { Config, ItemRelatorio, Linha, Turma } from './components/types';
 
-type Sessao = { autenticado: boolean; usuario?: string; nome?: string; configuracao?: string };
+type Sessao = { autenticado: boolean; usuario?: string; nome?: string };
 
 const CONFIG_INICIAL: Config = {
   modo: 'unica',
@@ -190,21 +190,7 @@ export default function Datas() {
         className="rounded-lg p-6 sm:p-8"
         style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
       >
-        {sessao.configuracao ? (
-          /* Falta configuração no servidor: mostrar o login seria enganoso,
-           * porque nenhuma senha vai funcionar até a variável existir. */
-          <div className="mx-auto flex max-w-md flex-col gap-2">
-            <h2 className="text-[15px] font-medium" style={{ color: 'var(--ink)' }}>
-              Configuração pendente no servidor
-            </h2>
-            <p
-              className="rounded-[6px] px-3 py-2 text-[12.5px] leading-relaxed"
-              style={{ background: 'var(--error-dim)', color: 'var(--error-text)', border: '1px solid var(--error-border)' }}
-            >
-              {sessao.configuracao}
-            </p>
-          </div>
-        ) : !sessao.autenticado ? (
+        {!sessao.autenticado ? (
           <LoginMoodle onEntrar={entrar} />
         ) : passo === 'configurar' ? (
           <Escopo

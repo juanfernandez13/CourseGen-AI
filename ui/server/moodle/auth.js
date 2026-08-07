@@ -2,13 +2,21 @@
 
 /* Sessão do Moodle guardada num cookie httpOnly da própria aplicação.
  *
- * O que viaja é o cookie de sessão do Moodle CIFRADO (AES-256-GCM). Motivos:
+ * O cookie carrega o `MoodleSession` — que É a credencial: quem tem aquele
+ * valor está logado como o usuário. Guardar no navegador é o que permite rodar
+ * em serverless sem Redis nem banco, já que cada invocação é um processo novo e
+ * não há memória compartilhada.
  *
- *   - httpOnly tira o valor do alcance de JavaScript, então XSS não o lê;
- *   - cifrado, nem o dono do navegador consegue extrair a sessão do Moodle do
- *     próprio cookie e usá-la fora da aplicação;
- *   - sem estado no servidor, que é o que permite rodar em serverless sem
- *     depender de Redis ou banco.
+ * Duas formas, escolhidas pela presença de MOODLE_SESSION_SECRET:
+ *
+ *   com segredo  →  "c." + AES-256-GCM   (recomendado)
+ *   sem segredo  →  "p." + base64url     (padrão, funciona sem configurar nada)
+ *
+ * O que a cifra acrescenta: sem ela, quem abre o DevTools ou copia o perfil do
+ * navegador lê o valor e usa a sessão do Moodle fora daqui, sem senha. O
+ * `httpOnly` cobre XSS, não acesso à máquina. Foi uma escolha explícita rodar
+ * assim por padrão, para não exigir configuração; definir o segredo fecha essa
+ * porta e não muda mais nada.
  *
  * As credenciais nunca são guardadas — são usadas uma vez para autenticar e
  * descartadas. */
@@ -19,86 +27,73 @@ const COOKIE = 'moodle_sessao';
 const VALIDADE_S = 2 * 60 * 60; // sessão do Moodle costuma cair antes disso
 const ALGORITMO = 'aes-256-gcm';
 
-const MINIMO_SEGREDO = 16;
-
-const FALTA_SEGREDO =
-  'MOODLE_SESSION_SECRET não está configurada no servidor. '
-  + 'Defina essa variável de ambiente (no painel da Vercel, em Settings → '
-  + 'Environment Variables) com pelo menos 16 caracteres e faça um novo deploy. '
-  + 'Sem ela a sessão do Moodle não pode ser cifrada.';
-
-/**
- * Diz se dá para cifrar sessões, sem lançar. As rotas checam ANTES de pedir
- * qualquer coisa ao Moodle: se falhar só na hora de gravar o cookie, o usuário
- * já digitou a senha e já autenticou lá — gasta um login para receber um erro
- * que nada tem a ver com credencial.
- *
- * @returns {{ok: true} | {ok: false, motivo: string}}
- */
-function configurado() {
-  const segredo = (process.env.MOODLE_SESSION_SECRET ?? '').trim();
-
-  if (process.env.NODE_ENV !== 'production') return { ok: true };
-  if (!segredo) return { ok: false, motivo: FALTA_SEGREDO };
-
-  if (segredo.length < MINIMO_SEGREDO) {
-    return {
-      ok: false,
-      motivo: `MOODLE_SESSION_SECRET tem ${segredo.length} caracteres; use pelo menos ${MINIMO_SEGREDO}.`,
-    };
-  }
-  return { ok: true };
-}
+const CIFRADO = 'c';
+const PLANO = 'p';
 
 let avisou = false;
 
+/** Chave de cifra, ou null quando não há segredo configurado. */
 function chave() {
-  const segredo = process.env.MOODLE_SESSION_SECRET;
+  const segredo = (process.env.MOODLE_SESSION_SECRET ?? '').trim();
   if (segredo) return crypto.createHash('sha256').update(segredo).digest();
 
-  if (process.env.NODE_ENV === 'production') throw new Error(FALTA_SEGREDO);
-
-  /* Desenvolvimento sem segredo configurado.
-   *
-   * A chave é DERIVADA da máquina, não sorteada. Uma chave aleatória guardada
-   * em variável de módulo parece mais segura e na prática quebra o login: o
-   * Next recompila o grafo de módulos da rota editada, cada rota acaba com sua
-   * própria instância deste arquivo, e o cookie cifrado por uma rota vira lixo
-   * para a outra — 401 a cada hot reload, sem explicação visível.
-   *
-   * Isto não protege nada de verdade; é só para não trafegar a sessão do
-   * Moodle em texto claro enquanto se desenvolve. Em produção o caminho acima
-   * é obrigatório. */
   if (!avisou) {
-    console.warn('[moodle] MOODLE_SESSION_SECRET ausente; usando chave derivada de desenvolvimento.');
+    console.warn(
+      '[moodle] MOODLE_SESSION_SECRET ausente: a sessão do Moodle vai no cookie '
+      + 'sem cifra (ainda httpOnly). Defina a variável para cifrar.',
+    );
     avisou = true;
   }
-
-  return crypto
-    .createHash('sha256')
-    .update(`coursegen-dev:${require('os').hostname()}:${process.cwd()}`)
-    .digest();
+  return null;
 }
 
-function cifra(dados) {
-  const iv = crypto.randomBytes(12);
-  const cifrador = crypto.createCipheriv(ALGORITMO, chave(), iv);
-  const corpo = Buffer.concat([cifrador.update(JSON.stringify(dados), 'utf8'), cifrador.final()]);
+function empacota(dados) {
+  const texto = JSON.stringify(dados);
+  const chaveAtual = chave();
 
-  return [iv, cifrador.getAuthTag(), corpo].map(b => b.toString('base64url')).join('.');
+  if (!chaveAtual) {
+    return `${PLANO}.${Buffer.from(texto, 'utf8').toString('base64url')}`;
+  }
+
+  const iv = crypto.randomBytes(12);
+  const cifrador = crypto.createCipheriv(ALGORITMO, chaveAtual, iv);
+  const corpo = Buffer.concat([cifrador.update(texto, 'utf8'), cifrador.final()]);
+
+  return [CIFRADO, iv, cifrador.getAuthTag(), corpo]
+    .map(p => (Buffer.isBuffer(p) ? p.toString('base64url') : p))
+    .join('.');
+}
+
+function desempacota(token) {
+  const partes = String(token).split('.');
+  const marca = partes[0];
+
+  if (marca === PLANO) {
+    return JSON.parse(Buffer.from(partes[1], 'base64url').toString('utf8'));
+  }
+
+  if (marca === CIFRADO) {
+    const chaveAtual = chave();
+    // cookie cifrado e segredo removido depois: não há como ler, refaz o login
+    if (!chaveAtual) return null;
+
+    const [iv, tag, corpo] = partes.slice(1).map(p => Buffer.from(p, 'base64url'));
+    const decifrador = crypto.createDecipheriv(ALGORITMO, chaveAtual, iv);
+    decifrador.setAuthTag(tag);
+
+    return JSON.parse(
+      Buffer.concat([decifrador.update(corpo), decifrador.final()]).toString('utf8'),
+    );
+  }
+
+  return null; // formato desconhecido (cookie antigo, lixo)
 }
 
 function decifra(token) {
+  if (!token) return null;
+
   try {
-    const [iv, tag, corpo] = String(token).split('.').map(p => Buffer.from(p, 'base64url'));
-    if (!iv || !tag || !corpo) return null;
-
-    const decifrador = crypto.createDecipheriv(ALGORITMO, chave(), iv);
-    decifrador.setAuthTag(tag);
-
-    const texto = Buffer.concat([decifrador.update(corpo), decifrador.final()]).toString('utf8');
-    const dados = JSON.parse(texto);
-
+    const dados = desempacota(token);
     if (!dados?.cookies || !dados?.expiraEm || Date.now() > dados.expiraEm) return null;
     return dados;
   } catch {
@@ -108,7 +103,12 @@ function decifra(token) {
 }
 
 function criaToken({ cookies, usuario, nome }) {
-  return cifra({ cookies, usuario, nome, expiraEm: Date.now() + VALIDADE_S * 1000 });
+  return empacota({ cookies, usuario, nome, expiraEm: Date.now() + VALIDADE_S * 1000 });
+}
+
+/** True quando a sessão está sendo cifrada. Só para diagnóstico. */
+function cifrando() {
+  return Boolean((process.env.MOODLE_SESSION_SECRET ?? '').trim());
 }
 
 const opcoesCookie = {
@@ -119,4 +119,4 @@ const opcoesCookie = {
   maxAge: VALIDADE_S,
 };
 
-module.exports = { COOKIE, VALIDADE_S, criaToken, decifra, opcoesCookie, configurado, FALTA_SEGREDO };
+module.exports = { COOKIE, VALIDADE_S, criaToken, decifra, opcoesCookie, cifrando };

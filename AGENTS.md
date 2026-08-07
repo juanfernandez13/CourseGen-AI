@@ -36,16 +36,21 @@ ui/server/    núcleo (CommonJS + .d.ts escritos à mão)
 | `GEMINI_KEY` | fallback | usada quando a requisição não traz `X-Gemini-Key` |
 | `BLOB_READ_WRITE_TOKEN` | não | ativa o upload direto para o Vercel Blob |
 | `MOODLE_URL` | não | base do Moodle; sem ela, `https://ead.ifce.edu.br/` |
-| `MOODLE_SESSION_SECRET` | **em produção** | cifra o cookie de sessão do Moodle |
+| `MOODLE_SESSION_SECRET` | não | cifra o cookie de sessão do Moodle |
 
-Há um `ui/.env.example` com todas elas e como gerar o segredo.
+Há um `ui/.env.example` com todas elas.
 
-**Deploy sem `MOODLE_SESSION_SECRET` compila e sobe** — a checagem é em tempo de
-requisição, não de build. As telas que falam com o Moodle respondem **503** com
-a instrução de configurar a variável; o resto do app segue normal. `configurado()`
-é chamada **antes** de autenticar: a versão anterior só estourava ao gravar o
-cookie, ou seja, depois de já ter usado a senha do usuário para logar no Moodle
-de verdade, devolvendo um erro que parecia de credencial.
+**Nenhuma é obrigatória para as telas do Moodle subirem.** Sem
+`MOODLE_SESSION_SECRET` o cookie de sessão vai em base64url (`p.…`); com ela,
+em AES-256-GCM (`c.…`). `auth.js` lê os dois formatos, então definir ou remover
+o segredo depois não quebra nada — só invalida as sessões abertas.
+
+Rodar sem cifra foi **escolha explícita**, para não exigir configuração no
+deploy. O custo: quem tem acesso ao navegador (DevTools, cópia do perfil) lê o
+valor e usa aquela sessão do Moodle fora do app, sem senha — e a conta usada
+costuma ser de admin. `httpOnly` cobre XSS, não acesso à máquina. Não
+"conserte" isso tornando a variável obrigatória sem falar com o dono do
+projeto.
 
 ## Invariantes
 
@@ -148,14 +153,17 @@ POST uploaduser/index.php   → passo 2; só AQUI usuários são criados
   "Novo usuário" / "Usuário atualizado". É de lá que saem as contagens; não
   existe "Usuários criados: N" na página.
 
-## `MOODLE_SESSION_SECRET` em desenvolvimento
+## Por que o cookie não guarda estado no servidor
 
-Sem a variável, `server/moodle/auth.js` deriva a chave de `hostname + cwd`.
-Já foi uma chave aleatória por processo, e **quebrava o login a cada hot
-reload**: o Next recompila o grafo da rota editada, cada rota fica com sua
-própria instância do módulo, e o cookie cifrado por uma vira lixo para a outra —
-401 instantâneo, sem erro visível. Chave derivada é estável entre instâncias.
-Em produção a variável continua obrigatória e o módulo aborta sem ela.
+Cada Vercel Function é um processo novo: não há memória compartilhada entre
+invocações, e guardar sessão exigiria Redis ou banco. Por isso a sessão do
+Moodle viaja no cookie do navegador.
+
+Isso já custou um bug sutil: a chave de cifra chegou a ser sorteada e guardada
+em variável de módulo. O Next recompila o grafo da rota editada, cada rota fica
+com sua própria instância do módulo, e o cookie escrito por uma virava lixo para
+a outra — 401 instantâneo a cada hot reload, sem erro visível. Qualquer chave
+tem que vir de fora do processo (hoje, da variável de ambiente) ou não existir.
 
 ## Moodle: o `.mbz` está correto, a restauração é que exige opção
 

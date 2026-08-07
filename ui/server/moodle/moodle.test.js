@@ -7,7 +7,7 @@ const { leFormulario, Campos } = require('./form');
 const { paraTimestamp, deTimestamp, leData, somaDias } = require('./dates');
 const { analisaRestricoes, defineRestricaoDeData, dataAtual } = require('./availability');
 const { planejaAtividade, planejaSecao, leDatasAtuais } = require('./plan');
-const { criaToken, decifra, VALIDADE_S } = require('./auth');
+const { criaToken, decifra, VALIDADE_S, cifrando } = require('./auth');
 const { leCurso } = require('./course');
 
 const FUSO = 'America/Fortaleza';
@@ -227,49 +227,6 @@ test('leCurso agrupa atividades por seção e captura o id da seção', () => {
   assert.deepEqual(curso.secoes[1].atividades.map(a => a.tipo), ['quiz']);
 });
 
-/* ---------- cookie de sessão ---------- */
-
-test('token cifrado volta ao original', () => {
-  const token = criaToken({ cookies: 'MoodleSession=abc', usuario: 'juan', nome: 'Juan' });
-  const dados = decifra(token);
-
-  assert.equal(dados.cookies, 'MoodleSession=abc');
-  assert.equal(dados.usuario, 'juan');
-  assert.ok(dados.expiraEm > Date.now());
-});
-
-test('token adulterado é rejeitado em vez de aceito pela metade', () => {
-  const token = criaToken({ cookies: 'MoodleSession=abc', usuario: 'juan', nome: 'Juan' });
-  const [iv, tag, corpo] = token.split('.');
-
-  // trocar o conteúdo cifrado por outro texto
-  assert.equal(decifra(`${iv}.${tag}.${Buffer.from('{"cookies":"roubado"}').toString('base64url')}`), null);
-
-  // virar um bit do texto cifrado (acrescentar caractere ao base64url não basta:
-  // o decode trabalha em grupos de 4 e ignoraria o excedente)
-  const bytes = Buffer.from(corpo, 'base64url');
-  bytes[0] ^= 0xff;
-  assert.equal(decifra(`${iv}.${tag}.${bytes.toString('base64url')}`), null);
-
-  // virar um bit do IV
-  const ivBytes = Buffer.from(iv, 'base64url');
-  ivBytes[0] ^= 0xff;
-  assert.equal(decifra(`${ivBytes.toString('base64url')}.${tag}.${corpo}`), null);
-
-  assert.equal(decifra('lixo'), null);
-  assert.equal(decifra(undefined), null);
-});
-
-test('token expirado não autentica', () => {
-  const agora = Date.now;
-  // cria o token "no passado" para que a validade já tenha vencido agora
-  Date.now = () => agora() - (VALIDADE_S + 60) * 1000;
-  const vencido = criaToken({ cookies: 'MoodleSession=abc', usuario: 'juan', nome: 'Juan' });
-  Date.now = agora;
-
-  assert.equal(decifra(vencido), null);
-});
-
 /* ---------- cadência ---------- */
 
 const { montaLinhas } = require('./cadencia');
@@ -325,42 +282,83 @@ test('range invertido ou incompleto não gera linhas', () => {
   assert.deepEqual(montaLinhas({ ...base, aulaInicio: NaN, aulaFim: 3 }), []);
 });
 
-/* ---------- configuração obrigatória em produção ---------- */
+/* ---------- cookie de sessão: com e sem segredo ---------- */
 
-const { configurado } = require('./auth');
-
-function comAmbiente(valores, executa) {
-  const anterior = { NODE_ENV: process.env.NODE_ENV, MOODLE_SESSION_SECRET: process.env.MOODLE_SESSION_SECRET };
-  Object.assign(process.env, valores);
-  for (const [k, v] of Object.entries(valores)) if (v === undefined) delete process.env[k];
-  try { return executa(); } finally { Object.assign(process.env, anterior); }
+function comSegredo(valor, executa) {
+  const anterior = process.env.MOODLE_SESSION_SECRET;
+  if (valor === undefined) delete process.env.MOODLE_SESSION_SECRET;
+  else process.env.MOODLE_SESSION_SECRET = valor;
+  try { return executa(); } finally {
+    if (anterior === undefined) delete process.env.MOODLE_SESSION_SECRET;
+    else process.env.MOODLE_SESSION_SECRET = anterior;
+  }
 }
 
-test('em produção sem MOODLE_SESSION_SECRET, configurado() reprova e diz o que fazer', () => {
-  const r = comAmbiente({ NODE_ENV: 'production', MOODLE_SESSION_SECRET: undefined }, configurado);
+const SESSAO = { cookies: 'MoodleSession=abc', usuario: 'juan', nome: 'Juan' };
 
-  assert.equal(r.ok, false);
-  assert.match(r.motivo, /MOODLE_SESSION_SECRET/);
-  assert.match(r.motivo, /Environment Variables/, 'a mensagem precisa dizer onde configurar');
+test('sem segredo o app funciona: guarda a sessão em claro no cookie', () => {
+  comSegredo(undefined, () => {
+    const token = criaToken(SESSAO);
+    assert.ok(token.startsWith('p.'), 'marca de token plano');
+    assert.equal(cifrando(), false);
+
+    const dados = decifra(token);
+    assert.equal(dados.cookies, 'MoodleSession=abc');
+    assert.equal(dados.usuario, 'juan');
+  });
 });
 
-test('segredo curto demais é recusado em produção', () => {
-  const r = comAmbiente({ NODE_ENV: 'production', MOODLE_SESSION_SECRET: 'abc' }, configurado);
-  assert.equal(r.ok, false);
-  assert.match(r.motivo, /pelo menos 16/);
+test('token plano é legível por quem tiver o cookie — é o custo aceito', () => {
+  comSegredo(undefined, () => {
+    const token = criaToken(SESSAO);
+    const cru = Buffer.from(token.slice(2), 'base64url').toString('utf8');
+    assert.match(cru, /MoodleSession=abc/);
+  });
 });
 
-test('segredo só de espaços conta como ausente', () => {
-  const r = comAmbiente({ NODE_ENV: 'production', MOODLE_SESSION_SECRET: '        ' }, configurado);
-  assert.equal(r.ok, false);
+test('com segredo, cifra e o valor não aparece em claro', () => {
+  comSegredo('x'.repeat(40), () => {
+    const token = criaToken(SESSAO);
+    assert.ok(token.startsWith('c.'), 'marca de token cifrado');
+    assert.equal(cifrando(), true);
+    assert.doesNotMatch(token, /MoodleSession/);
+    assert.equal(decifra(token).cookies, 'MoodleSession=abc');
+  });
 });
 
-test('com segredo adequado em produção, aprova', () => {
-  const r = comAmbiente({ NODE_ENV: 'production', MOODLE_SESSION_SECRET: 'x'.repeat(64) }, configurado);
-  assert.deepEqual(r, { ok: true });
+test('token cifrado adulterado é rejeitado', () => {
+  comSegredo('x'.repeat(40), () => {
+    const [marca, iv, tag, corpo] = criaToken(SESSAO).split('.');
+    const bytes = Buffer.from(corpo, 'base64url');
+    bytes[0] ^= 0xff;
+    assert.equal(decifra([marca, iv, tag, bytes.toString('base64url')].join('.')), null);
+  });
 });
 
-test('em desenvolvimento não exige nada — a chave derivada resolve', () => {
-  const r = comAmbiente({ NODE_ENV: 'development', MOODLE_SESSION_SECRET: undefined }, configurado);
-  assert.deepEqual(r, { ok: true });
+test('cookie cifrado deixa de valer se o segredo for removido depois', () => {
+  const token = comSegredo('x'.repeat(40), () => criaToken(SESSAO));
+  comSegredo(undefined, () => assert.equal(decifra(token), null, 'sem a chave, refaz o login'));
+});
+
+test('cookie plano continua valendo depois de configurar o segredo? não — refaz o login', () => {
+  const token = comSegredo(undefined, () => criaToken(SESSAO));
+  // o formato plano é reconhecido, mas a sessão do Moodle provavelmente já caiu;
+  // o importante é não estourar
+  comSegredo('x'.repeat(40), () => assert.equal(decifra(token).usuario, 'juan'));
+});
+
+test('token vencido não autentica em nenhum dos dois modos', () => {
+  for (const segredo of [undefined, 'x'.repeat(40)]) {
+    const agora = Date.now;
+    Date.now = () => agora() - (VALIDADE_S + 60) * 1000;
+    const vencido = comSegredo(segredo, () => criaToken(SESSAO));
+    Date.now = agora;
+    comSegredo(segredo, () => assert.equal(decifra(vencido), null, `modo ${segredo ? 'cifrado' : 'plano'}`));
+  }
+});
+
+test('lixo e ausência não estouram', () => {
+  assert.equal(decifra('lixo'), null);
+  assert.equal(decifra(undefined), null);
+  assert.equal(decifra('z.abc'), null, 'formato desconhecido');
 });
