@@ -141,7 +141,7 @@ export default function SettingsModal({ open, onClose }: Props) {
                   )}
                 </div>
                 <div className="mt-0.5 font-mono-ui text-[10.5px]" style={{ color: 'var(--ink-3)' }}>
-                  gemini-2.5-flash · gemini-1.5-pro
+                  gemini-3.8-flash
                 </div>
               </div>
               <a
