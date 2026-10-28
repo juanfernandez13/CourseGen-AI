@@ -5,6 +5,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import { generateMBZ } from '../../../server/mbzGenerator';
 import { mapTaskFiles } from '../../../server/taskFileMapper';
+import { isQuizOnly } from '../../../server/questionarios';
 import { discardBlobs, downloadToTmp, isRemoteFile, type RemoteFile } from '../../../server/blobStore';
 
 export const runtime = 'nodejs';
@@ -106,8 +107,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const quizOnly = isQuizOnly(matrizData);
+    if (quizOnly && !(matrizData.aulas as Array<Record<string, unknown>> | undefined)?.some(aula => aula?.quiz)) {
+      return NextResponse.json({ error: 'Nenhum questionário para gerar.' }, { status: 400 });
+    }
+
     const mbzPath = await generateMBZ(matrizData);
-    const filename = `curso_${(matrizData.disciplina as Record<string, unknown>)?.codigo || 'moodle'}.mbz`;
+    const filename = quizOnly
+      ? 'questionarios.mbz'
+      : `curso_${(matrizData.disciplina as Record<string, unknown>)?.codigo || 'moodle'}.mbz`;
     return streamAndCleanup(mbzPath, filename);
   } catch (error: unknown) {
     console.error('Falha ao gerar o MBZ:', error);

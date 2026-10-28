@@ -90,6 +90,22 @@ function mapQuizFiles(files) {
   return mapFilesByNumber(files, PADROES.quiz);
 }
 
+/**
+ * Arquivos de quiz na ordem em que o Gemini os extrai, cada um com o seu número.
+ *
+ * Com matriz vale um arquivo por número (o primeiro), porque o número aponta
+ * para a aula. Sem matriz — modo "só questionários" — todos entram, para não
+ * descartar em silêncio um segundo arquivo com o mesmo número.
+ */
+function listQuizFiles(files, { umPorNumero = true } = {}) {
+  const porNumero = mapQuizFiles(files);
+  return Object.keys(porNumero)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .flatMap(numero =>
+      (umPorNumero ? porNumero[numero].slice(0, 1) : porNumero[numero]).map(file => ({ file, numero })));
+}
+
 module.exports = {
   PADROES,
   extractTaskNumber,
@@ -97,4 +113,5 @@ module.exports = {
   mapFilesByNumber,
   mapTaskFiles,
   mapQuizFiles,
+  listQuizFiles,
 };

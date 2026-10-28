@@ -24,6 +24,7 @@ ui/server/    núcleo (CommonJS + .d.ts escritos à mão)
   planilha.js       XLSX/CSV → linhas (exceljs)
   alunos.js         cadastro em lote: prompt, validação, CSV
   taskFileMapper.js associa arquivos a tarefas/quizzes pelo nome
+  questionarios.js  modo "só questionários": regras do JSON compartilhadas com a tela
   blobStore.ts      adapter do Vercel Blob
   mbzGenerator/     geração do pacote Moodle
   moodle/           edição de datas em turmas já publicadas (aba "Datas das aulas")
@@ -153,6 +154,40 @@ POST uploaduser/index.php   → passo 2; só AQUI usuários são criados
   **depois** de confirmar, na tabela de resultado, cuja primeira coluna traz
   "Novo usuário" / "Usuário atualizado". É de lá que saem as contagens; não
   existe "Usuários criados: N" na página.
+
+## Só questionários: .mbz para mesclar num curso que já existe
+
+Para quando pedem só um quiz e não há matriz. A aba "Só questionários" extrai os
+`.docx` com o Gemini e gera um pacote que se restaura com **"mesclar o backup
+neste curso"**, nunca a opção que apaga o conteúdo.
+
+- **O JSON leva `modo: "questionarios"`**; cada item de `aulas` é um questionário
+  e `numero` é a **seção de destino** (0 = geral). As regras ficam em
+  `server/questionarios.js`; o gerador ramifica em `createQuizOnlyModel`
+  (`model.js`) e o resto lê `model.quizOnly`.
+- **O pacote só leva o que não pertence ao curso**: nada de mural, blocos HTML,
+  Avaliações, Faltas, Avaliação Final nem `gradebook.xml`. Sem o arquivo o Moodle
+  não toca na estrutura de notas do destino (`restore_gradebook_structure_step`
+  só roda se ele existe e o curso tem apenas a categoria raiz); com ele, criaria
+  categorias num curso alheio.
+- **Seção sem nome nem resumo (`$@NULL@$`).** Ao mesclar, o Moodle só preenche
+  nome e resumo de uma seção existente quando estão vazios, e nunca altera a
+  restrição de acesso. Vazio é não tocar no que o destino já tem.
+- **A nota cai na raiz, com peso 0.** O Moodle descarta a categoria de nota da
+  atividade quando o backup vem de outro site. O peso só sai do último `[n]` do
+  título, como no curso inteiro; sem ele é 0, porque numa agregação natural
+  `aggregationcoef` é o flag de crédito extra e um valor herdado viraria nota
+  extra sem aviso.
+- **Seção além da última** faz o Moodle criar também as vazias do meio (a 9 num
+  curso com seções 0–6 cria a 7 e a 8).
+- **Sem matriz, nenhum arquivo é descartado**: `/api/extract` usa
+  `listQuizFiles(..., { umPorNumero: false })`, então dois quizzes com o mesmo
+  número viram dois questionários, e devolve `arquivos[i]` alinhado a
+  `quizzes[i]` para a tela nomear e posicionar cada um.
+- **Comprovado no Moodle 4.1.17 do laboratório** (`Moodle-AI/docs/lab`): mesclando
+  num curso gerado por este projeto e restaurando como curso novo. Seções,
+  blocos, categorias de nota e atividades do destino ficaram intactos, e os três
+  tipos de questão abriram tentativa de pré-visualização. Mexeu no pacote? Repita.
 
 ## Por que o cookie não guarda estado no servidor
 

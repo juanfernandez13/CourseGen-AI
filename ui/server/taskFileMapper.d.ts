@@ -12,3 +12,8 @@ export function mapFilesByNumber<T extends NamedTaskFile>(
 
 export function mapTaskFiles<T extends NamedTaskFile>(files: T[]): Record<number, T[]>;
 export function mapQuizFiles<T extends NamedTaskFile>(files: T[]): Record<number, T[]>;
+
+export function listQuizFiles<T extends NamedTaskFile>(
+  files: T[],
+  opcoes?: { umPorNumero?: boolean },
+): Array<{ file: T; numero: number }>;

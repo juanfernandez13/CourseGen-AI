@@ -121,14 +121,16 @@ async function generateMBZ(matrizData) {
 /** Writes the Moodle tree; archive lifecycle stays in generateMBZ. */
 function writeBackupContents({ matrizData, model, now, backupId, write, writeActivityStubs, fileEntries }) {
   const {
-    disciplina, mural, professor, aulas, encontros, categorias,
-    shortname, fullname, blocks, sec0Id, sec0Title, allActivities, allSections, ids,
+    disciplina, aulas, categorias, shortname, fullname, allActivities, allSections, ids,
   } = model;
   const {
-    base, catId, contextId, aulaIds, encontrosIds, avFinalId,
-    avSectionId, faltasSectionId, rootCatId, categoriaIds, categoriaItemIds, gradeSort,
-    courseGradeItemId, eadCatItemId, presencialCatItemId,
+    base, catId, contextId, aulaIds, rootCatId, categoriaIds, categoriaItemIds, gradeSort,
+    courseGradeItemId,
   } = ids;
+  // O resumo de um curso novo vem da matriz; no modo só questionários, só do nome.
+  const summarySource = model.quizOnly
+    ? { disciplina: { nome: disciplina.nome || 'Questionários' } }
+    : matrizData;
 
   // ── moodle_backup.xml ──────────────────────────────────────────────────────
   const secSettings = allSections.map(s => {
@@ -225,7 +227,7 @@ ${actSettings}
   <shortname>${shortname}</shortname>
   <fullname>${fullname}</fullname>
   <idnumber></idnumber>
-  <summary>${sanitize(buildCourseSummary(matrizData))}</summary>
+  <summary>${sanitize(buildCourseSummary(summarySource))}</summary>
   <summaryformat>1</summaryformat>
   <format>topics</format>
   <showgrades>1</showgrades>
@@ -324,6 +326,56 @@ ${actSettings}
   write('course/roles.xml',       ROLES);
   write('course/inforef.xml',     INFOREF_EMPTY);
 
+  if (model.quizOnly) {
+    writeQuizOnlySections({ model, now, write });
+  } else {
+    writeFullCourseSections({ model, now, write });
+  }
+
+  writeActivities({ model, now, write, writeActivityStubs, fileEntries, emptyGrades: GRADES });
+
+  // ── Root files ─────────────────────────────────────────────────────────────
+  write('files.xml', buildFilesXml(fileEntries, now));
+
+  // Overwrite inforefs for assigns with attached files (IDs resolved after buildFilesXml)
+  for (const { dir, gradeItemId, idxStart, idxEnd } of (fileEntries._assignInforefs || [])) {
+    const dirId    = fileEntries[idxStart]._xmlId - 1;
+    const fileIds  = fileEntries.slice(idxStart, idxEnd).map(e => e._xmlId);
+    write(`${dir}/inforef.xml`, buildActivityInforef({
+      gradeItemId,
+      fileIds: [dirId, ...fileIds],
+    }));
+  }
+
+  write('questions.xml',    buildQuestionsXml(aulas, aulaIds, now));
+  // Sem gradebook.xml o Moodle não mexe na estrutura de notas do curso de
+  // destino (restore_gradebook_structure_step só roda se o arquivo existir). É o
+  // que o modo só questionários quer: nenhuma categoria alheia aparece lá.
+  if (!model.quizOnly) {
+    const categoriasComIds = categorias.map((cat, i) => ({
+      ...cat, id: categoriaIds[i], itemId: categoriaItemIds[i],
+    }));
+    write('gradebook.xml',  buildGradebook(rootCatId, categoriasComIds, courseGradeItemId, gradeSort, now));
+  }
+  write('outcomes.xml',     `<?xml version="1.0" encoding="UTF-8"?>\n<outcomes_definition>\n</outcomes_definition>`);
+  write('badges.xml',       `<?xml version="1.0" encoding="UTF-8"?>\n<badges>\n</badges>`);
+  write('completion.xml',   `<?xml version="1.0" encoding="UTF-8"?>\n<course_completion>\n</course_completion>`);
+  write('groups.xml',       `<?xml version="1.0" encoding="UTF-8"?>\n<groups>\n  <groupings>\n  </groupings>\n</groups>`);
+  write('roles.xml',        `<?xml version="1.0" encoding="UTF-8"?>\n<roles_definition>\n  <role id="5">\n    <name></name>\n    <shortname>student</shortname>\n    <nameincourse>$@NULL@$</nameincourse>\n    <description></description>\n    <sortorder>5</sortorder>\n    <archetype>student</archetype>\n  </role>\n</roles_definition>`);
+  write('scales.xml',       `<?xml version="1.0" encoding="UTF-8"?>\n<scales_definition>\n</scales_definition>`);
+  write('grade_history.xml', GRADE_HIST);
+  write('users.xml',        `<?xml version="1.0" encoding="UTF-8"?>\n<users>\n</users>`);
+}
+
+/** Mural, aulas, blocos HTML e as seções Avaliações/Faltas: o curso inteiro. */
+function writeFullCourseSections({ model, now, write }) {
+  const {
+    mural, professor, aulas, encontros, blocks, sec0Id, sec0Title, ids,
+  } = model;
+  const {
+    contextId, aulaIds, encontrosIds, avFinalId, avSectionId, faltasSectionId,
+  } = ids;
+
   // ── sections ───────────────────────────────────────────────────────────────
   const sec0Summary = textToMoodleHtml(mural.descricao);
   write(`sections/section_${sec0Id}/section.xml`, buildSectionXml(sec0Id, 0, sec0Title, sec0Summary, [], 0, now));
@@ -406,35 +458,19 @@ ${actSettings}
   write(`sections/section_${faltasSectionId}/section.xml`,
     buildSectionXml(faltasSectionId, avSecNum + 1, 'Faltas', '', faltasSeq, 0, now));
   write(`sections/section_${faltasSectionId}/inforef.xml`, INFOREF_EMPTY);
+}
 
-  writeActivities({ model, now, write, writeActivityStubs, fileEntries, emptyGrades: GRADES });
-
-  // ── Root files ─────────────────────────────────────────────────────────────
-  write('files.xml', buildFilesXml(fileEntries, now));
-
-  // Overwrite inforefs for assigns with attached files (IDs resolved after buildFilesXml)
-  for (const { dir, gradeItemId, idxStart, idxEnd } of (fileEntries._assignInforefs || [])) {
-    const dirId    = fileEntries[idxStart]._xmlId - 1;
-    const fileIds  = fileEntries.slice(idxStart, idxEnd).map(e => e._xmlId);
-    write(`${dir}/inforef.xml`, buildActivityInforef({
-      gradeItemId,
-      fileIds: [dirId, ...fileIds],
-    }));
+/**
+ * Só as seções que recebem questionário, sem nome nem resumo: ao mesclar, o
+ * Moodle só preenche nome/resumo de seção existente quando estão vazios, então
+ * deixar vazio é não tocar no que o curso de destino já tem.
+ */
+function writeQuizOnlySections({ model, now, write }) {
+  for (const secao of model.secoes) {
+    write(`sections/section_${secao.sectionId}/section.xml`,
+      buildSectionXml(secao.sectionId, secao.numero, '$@NULL@$', '', secao.quizIds, 0, now));
+    write(`sections/section_${secao.sectionId}/inforef.xml`, INFOREF_EMPTY);
   }
-
-  write('questions.xml',    buildQuestionsXml(aulas, aulaIds, now));
-  const categoriasComIds = categorias.map((cat, i) => ({
-    ...cat, id: categoriaIds[i], itemId: categoriaItemIds[i],
-  }));
-  write('gradebook.xml',    buildGradebook(rootCatId, categoriasComIds, courseGradeItemId, gradeSort, now));
-  write('outcomes.xml',     `<?xml version="1.0" encoding="UTF-8"?>\n<outcomes_definition>\n</outcomes_definition>`);
-  write('badges.xml',       `<?xml version="1.0" encoding="UTF-8"?>\n<badges>\n</badges>`);
-  write('completion.xml',   `<?xml version="1.0" encoding="UTF-8"?>\n<course_completion>\n</course_completion>`);
-  write('groups.xml',       `<?xml version="1.0" encoding="UTF-8"?>\n<groups>\n  <groupings>\n  </groupings>\n</groups>`);
-  write('roles.xml',        `<?xml version="1.0" encoding="UTF-8"?>\n<roles_definition>\n  <role id="5">\n    <name></name>\n    <shortname>student</shortname>\n    <nameincourse>$@NULL@$</nameincourse>\n    <description></description>\n    <sortorder>5</sortorder>\n    <archetype>student</archetype>\n  </role>\n</roles_definition>`);
-  write('scales.xml',       `<?xml version="1.0" encoding="UTF-8"?>\n<scales_definition>\n</scales_definition>`);
-  write('grade_history.xml', GRADE_HIST);
-  write('users.xml',        `<?xml version="1.0" encoding="UTF-8"?>\n<users>\n</users>`);
 }
 
 module.exports = { generateMBZ };

@@ -6,6 +6,7 @@ import GradebookEditor, { normalizarCategorias, type CategoriaNota } from './Gra
 import type { useJsonHistory } from '../lib/useJsonHistory';
 import type { FilesUpdater } from '../lib/usePersistedFiles';
 import { mapTaskFiles } from '../../server/taskFileMapper';
+import { isQuizOnly, secaoDestino } from '../../server/questionarios';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 type QuestaoItem = { texto: string; isCorrect?: boolean; resposta?: string };
@@ -22,6 +23,8 @@ type Tarefa = ActivityBase & { arquivos?: { filename?: string; filePath?: string
 type Forum  = ActivityBase;
 type Aula   = { numero?: number; titulo?: string; descricao?: string; data_inicio?: string | null; data_fim?: string | null; quiz?: Quiz; tarefa?: Tarefa; forum?: Forum };
 type MatrizData = {
+  /** 'questionarios' = pacote só de quizzes (ver server/questionarios.js). */
+  modo?: string;
   disciplina?: { nome?: string; codigo?: string; carga_horaria?: string; semestre?: string; turma?: string; polo?: string };
   professor?:  { nome?: string; email?: string; titulacao?: string; tutor?: string };
   aulas?: Aula[];
@@ -650,6 +653,115 @@ function VisualView({ data, tarefaMap, onAttach, onDetach, onMove, onCategoriasC
   );
 }
 
+/* ─── Só questionários ───────────────────────────────────────────────────── */
+/* Cada item de `aulas` é um questionário e `numero` é a seção do curso de
+ * destino. Editar aqui grava no JSON, como o resto da revisão. */
+/* Duas colunas no celular (seção | título, e embaixo contagem | ver); quatro no desktop. */
+const COLUNAS_QUIZ = 'grid-cols-[84px_minmax(0,1fr)] sm:grid-cols-[84px_minmax(0,1fr)_76px_52px]';
+
+function QuizOnlyView({ data, onChange }: { data: MatrizData; onChange: (aulas: Aula[]) => void }) {
+  const aulas = data.aulas ?? [];
+  const [aberto, setAberto] = useState<number | null>(null);
+  const totalQuestoes = aulas.reduce((soma, aula) => soma + (aula.quiz?.questoes?.length ?? 0), 0);
+  const campo = { background: 'var(--bg)', color: 'var(--text-1)', border: '1px solid var(--line-2)' };
+  const noop = () => {};
+
+  function alterar(i: number, mudar: (aula: Aula) => Aula) {
+    onChange(aulas.map((aula, idx) => (idx === i ? mudar(aula) : aula)));
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap gap-1.5">
+        {([
+          ['Questionários', aulas.length, '--quiz'],
+          ['Questões', totalQuestoes, '--accent'],
+        ] as [string, number, string][]).map(([label, value, color]) => (
+          <div key={label} className="flex items-baseline gap-2 rounded-md px-3 py-2"
+            style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
+            <span className="text-[18px] font-semibold tabular-nums" style={{ color: `var(${color})` }}>{value}</span>
+            <span className="font-mono-ui text-[10.5px] uppercase tracking-[0.06em]" style={{ color: 'var(--ink-3)' }}>{label}</span>
+          </div>
+        ))}
+      </div>
+
+      {aulas.length === 0 ? (
+        <p className="text-sm text-center py-12" style={{ color: 'var(--border)' }}>Nenhum questionário extraído.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {/* Rótulos de coluna só no desktop; no celular cada campo leva o seu. */}
+          <div className={`hidden gap-3 px-3 font-mono-ui text-[10px] uppercase tracking-[0.08em] sm:grid ${COLUNAS_QUIZ}`}
+            style={{ color: 'var(--ink-3)' }}>
+            <span>Seção</span><span>Título</span><span>Questões</span><span />
+          </div>
+          {aulas.map((aula, i) => {
+            const questoes = aula.quiz?.questoes ?? [];
+            return (
+              <div key={i}
+                className={`grid items-end gap-x-3 gap-y-2 rounded-md p-3 sm:items-center ${COLUNAS_QUIZ}`}
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
+                <label className="flex flex-col gap-1">
+                  <span className="font-mono-ui text-[10px] uppercase tracking-[0.08em] sm:hidden" style={{ color: 'var(--ink-3)' }}>Seção</span>
+                  <input
+                    type="number" min={0}
+                    aria-label={`Seção de destino do questionário ${i + 1}`}
+                    value={secaoDestino(aula.numero, i)}
+                    onChange={e => {
+                      const n = Number.parseInt(e.target.value, 10);
+                      if (Number.isInteger(n) && n >= 0) alterar(i, a => ({ ...a, numero: n }));
+                    }}
+                    className="w-full rounded-md px-2 py-1.5 text-[13px] tabular-nums outline-none"
+                    style={campo}
+                  />
+                </label>
+                <label className="flex min-w-0 flex-col gap-1">
+                  <span className="font-mono-ui text-[10px] uppercase tracking-[0.08em] sm:hidden" style={{ color: 'var(--ink-3)' }}>Título</span>
+                  <input
+                    type="text"
+                    aria-label={`Título do questionário ${i + 1}`}
+                    value={aula.quiz?.titulo ?? ''}
+                    onChange={e => alterar(i, a => ({ ...a, quiz: { ...a.quiz, titulo: e.target.value } }))}
+                    className="w-full min-w-0 rounded-md px-2 py-1.5 text-[13px] outline-none"
+                    style={campo}
+                  />
+                </label>
+                <span className="text-[12px] tabular-nums"
+                  style={{ color: questoes.length ? 'var(--ink-2)' : 'var(--error)' }}
+                  title={questoes.length ? undefined : 'Nenhuma questão extraída'}>
+                  {questoes.length}<span className="sm:hidden">{questoes.length === 1 ? ' questão' : ' questões'}</span>
+                </span>
+                <button
+                  onClick={() => setAberto(i)}
+                  className="justify-self-end rounded-[3px] px-1.5 py-1 text-[11px] transition-colors hover:bg-(--surface-3)"
+                  style={{ color: 'var(--ink-3)', border: '1px solid var(--line)' }}>
+                  ver
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <p className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
+        Seção é o número da seção no curso de destino (0 = geral). Passando da última, o Moodle cria seções vazias até ela.
+      </p>
+
+      {aberto !== null && aulas[aberto] && (
+        <AulaModal
+          aula={{ ...aulas[aberto], numero: secaoDestino(aulas[aberto].numero, aberto), titulo: aulas[aberto].quiz?.titulo }}
+          tarefaFiles={[]}
+          tarefaNumero={0}
+          totalTarefas={0}
+          onAttach={noop}
+          onDetach={noop}
+          onMove={noop}
+          onClose={() => setAberto(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 /* ─── JSON View ──────────────────────────────────────────────────────────── */
 function JsonView({ json, onJsonChange, parseError }: { json: string; onJsonChange: (s: string) => void; parseError: string | null }) {
   function format() {
@@ -707,6 +819,7 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
   const [view, setView] = useState<'visual' | 'json'>('visual');
   const [showHistory, setShowHistory] = useState(false);
   const { data, error: parseError } = parseJsonSafe(json);
+  const quizOnly = isQuizOnly(data);
   const canGenerate = !parseError && !loading;
   const tarefaMap = mapTaskFiles(tarefaFiles);
   const hasHistory = history && history.versions.length > 0;
@@ -748,10 +861,12 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
             className="mt-1.5 text-[22px] font-semibold tracking-tight"
             style={{ color: 'var(--text-1)', letterSpacing: '-0.4px' }}
           >
-            Revisar dados extraídos
+            {quizOnly ? 'Revisar questionários' : 'Revisar dados extraídos'}
           </h2>
           <p className="mt-1 text-[13px]" style={{ color: 'var(--text-2)' }}>
-            Clique em uma aula para ver detalhes e arquivos.
+            {quizOnly
+              ? 'Confira a seção de destino e o título de cada um.'
+              : 'Clique em uma aula para ver detalhes e arquivos.'}
           </p>
         </div>
 
@@ -846,7 +961,13 @@ export default function ReviewStep({ json, onJsonChange, onGenerate, onBack, loa
       </div>
 
       {/* Content */}
-      {view === 'visual' && data  && (
+      {view === 'visual' && data && quizOnly && (
+        <QuizOnlyView
+          data={data}
+          onChange={aulas => onJsonChange(JSON.stringify({ ...data, aulas }, null, 2))}
+        />
+      )}
+      {view === 'visual' && data && !quizOnly && (
         <VisualView data={data} tarefaMap={tarefaMap} onAttach={handleAttach} onDetach={handleDetach} onMove={handleMove} onCategoriasChange={handleCategorias} />
       )}
       {view === 'visual' && !data && (

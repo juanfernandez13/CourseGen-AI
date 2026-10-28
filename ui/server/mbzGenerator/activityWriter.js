@@ -12,17 +12,19 @@ const {
 /** Writes lesson activities, meeting grade items and the final assessment. */
 function writeActivities({ model, now, write, writeActivityStubs, fileEntries, emptyGrades }) {
   writeLessonActivities({ model, now, write, writeActivityStubs, fileEntries, emptyGrades });
+  // Pacote só de questionários não tem encontros nem avaliação final.
+  if (model.quizOnly) return;
   writeMeetingActivities({ model, now, write, writeActivityStubs });
   writeFinalAssessment({ model, now, write, writeActivityStubs });
 }
 
 function writeLessonActivities({ model, now, write, writeActivityStubs, fileEntries, emptyGrades }) {
   const { aulas } = model;
-  const { aulaIds, gradeCategoryIdFor, gradeSort } = model.ids;
+  const { aulaIds, aulaSectionNumbers, gradeCategoryIdFor, gradeSort } = model.ids;
 
   for (const [i, aula] of aulas.entries()) {
     const ids = aulaIds[i];
-    const secNum = i + 1;
+    const secNum = aulaSectionNumbers[i];
 
     if (aula.forum) {
       const dir = `activities/forum_${ids.forumId}`;

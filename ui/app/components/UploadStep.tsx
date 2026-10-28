@@ -30,7 +30,7 @@ type Props = {
   history?: ReturnType<typeof useJsonHistory>;
 };
 
-function Spinner() {
+export function Spinner() {
   return (
     <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30 70" strokeLinecap="round" />
@@ -47,7 +47,7 @@ const EXT_COLORS: Record<string, string> = {
   ppt:  '#fb923c',
 };
 
-function FileChip({ name, badge, onRemove, onView }: { name: string; badge?: string; onRemove: () => void; onView?: () => void }) {
+export function FileChip({ name, badge, onRemove, onView }: { name: string; badge?: string; onRemove: () => void; onView?: () => void }) {
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
   const color = EXT_COLORS[ext] ?? 'var(--accent)';
 
@@ -105,7 +105,7 @@ function FileChip({ name, badge, onRemove, onView }: { name: string; badge?: str
 }
 
 /* ─── Drop Zone ─────────────────────────────────────────────────────────────── */
-function DropZone({
+export function DropZone({
   accept, multiple, onAdd, dragging, setDragging, compact = false,
 }: {
   accept: string;
@@ -156,7 +156,7 @@ function DropZone({
 }
 
 /* ─── Card wrapper ───────────────────────────────────────────────────────────── */
-function UploadCard({
+export function UploadCard({
   title, subtitle, required, accentColor, icon, children,
 }: {
   title: string;

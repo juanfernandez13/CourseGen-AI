@@ -6,11 +6,13 @@ import UploadStep from './components/UploadStep';
 import ReviewStep from './components/ReviewStep';
 import DoneStep from './components/DoneStep';
 import BuilderStep from './components/BuilderStep';
+import QuizOnlyStep from './components/QuizOnlyStep';
 import { generateMbz } from './lib/api';
+import { isQuizOnlyJson } from '../server/questionarios';
 import { useJsonHistory } from './lib/useJsonHistory';
 import { usePersistedFiles } from './lib/usePersistedFiles';
 
-type Mode = 'upload' | 'builder';
+type Mode = 'upload' | 'builder' | 'quizzes';
 type Step = 1 | 2 | 3;
 
 export default function Home() {
@@ -46,7 +48,8 @@ export default function Home() {
     setError(null);
     try {
       history.save(extractedJson, 'Antes de gerar MBZ');
-      await generateMbz(extractedJson, quizFiles, tarefaFiles);
+      // Pacote só de questionários não leva tarefas, mesmo que sobrem anexos de outra sessão.
+      await generateMbz(extractedJson, quizFiles, isQuizOnlyJson(extractedJson) ? [] : tarefaFiles);
       setStep(3);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao gerar o MBZ.');
@@ -82,23 +85,24 @@ export default function Home() {
           <>
             {/* Mode selector — dir-b segmented pill */}
             <div
-              className="mb-6 inline-flex overflow-hidden rounded-[5px]"
+              className="mb-6 inline-flex max-w-full overflow-x-auto rounded-[5px]"
               style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}
             >
               {([
                 { key: 'upload',  label: 'Upload / Importar' },
                 { key: 'builder', label: 'Criar manualmente' },
-              ] as const).map((opt, i) => {
+                { key: 'quizzes', label: 'Só questionários' },
+              ] as const).map((opt, i, opts) => {
                 const on = mode === opt.key;
                 return (
                   <button
                     key={opt.key}
                     onClick={() => setMode(opt.key)}
-                    className="px-3.5 py-1.5 text-[12px] transition-colors font-mono-ui uppercase tracking-[0.06em]"
+                    className="whitespace-nowrap px-3.5 py-1.5 text-[12px] transition-colors font-mono-ui uppercase tracking-[0.06em]"
                     style={{
                       background:   on ? 'var(--surface-3)' : 'transparent',
                       color:        on ? 'var(--ink)' : 'var(--ink-3)',
-                      borderRight:  i === 0 ? '1px solid var(--line)' : 'none',
+                      borderRight:  i < opts.length - 1 ? '1px solid var(--line)' : 'none',
                       fontWeight:   on ? 600 : 400,
                     }}
                   >
@@ -123,6 +127,13 @@ export default function Home() {
             {mode === 'builder' && (
               <BuilderStep onDone={handleBuilderDone} />
             )}
+            {mode === 'quizzes' && (
+              <QuizOnlyStep
+                quizFiles={quizFiles}
+                onQuizzesChange={setQuizFiles}
+                onExtracted={handleExtracted}
+              />
+            )}
           </>
         )}
         {step === 2 && (
@@ -139,7 +150,7 @@ export default function Home() {
             onRestore={handleRestore}
           />
         )}
-        {step === 3 && <DoneStep onReset={handleReset} />}
+        {step === 3 && <DoneStep onReset={handleReset} quizOnly={isQuizOnlyJson(extractedJson)} />}
       </div>
     </div>
   );

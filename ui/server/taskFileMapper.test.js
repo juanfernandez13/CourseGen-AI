@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { extractTaskNumber, mapTaskFiles } = require('./taskFileMapper');
+const { extractTaskNumber, mapTaskFiles, listQuizFiles } = require('./taskFileMapper');
 
 test('reconhece número com espaço, underscore ou hífen', () => {
   assert.equal(extractTaskNumber('Tarefa 3_Aula 3_Metodologia.docx'), 3);
@@ -161,4 +161,40 @@ test('mover um arquivo não arrasta os outros da mesma tarefa', () => {
 
   assert.equal(mapped[1][0].name, 'tarefa_1__7._Tarefa_4_-_Aula_4.docx');
   assert.equal(mapped[4][0].name, '7.1_Tarefa_4_-_Aula_4.pdf');
+});
+
+test('listQuizFiles: ordena pelo número do nome e guarda o número de cada arquivo', () => {
+  const lista = listQuizFiles([{ name: 'Quiz 3.docx' }, { name: 'Quiz 1.docx' }, { name: 'Prova.docx' }]);
+
+  assert.deepEqual(lista.map(item => [item.file.name, item.numero]), [
+    ['Quiz 1.docx', 1],
+    ['Prova.docx', 2],
+    ['Quiz 3.docx', 3],
+  ]);
+});
+
+test('listQuizFiles: com matriz vale um arquivo por número', () => {
+  const lista = listQuizFiles([{ name: 'Quiz 2 A.docx' }, { name: 'Quiz 2 B.docx' }]);
+
+  assert.equal(lista.length, 1);
+  assert.equal(lista[0].numero, 2);
+});
+
+test('listQuizFiles: sem matriz nenhum arquivo é descartado, mesmo com número repetido', () => {
+  const lista = listQuizFiles(
+    [{ name: 'Quiz 2 A.docx' }, { name: 'Quiz 2 B.docx' }],
+    { umPorNumero: false },
+  );
+
+  assert.deepEqual(lista.map(item => [item.file.name, item.numero]), [
+    ['Quiz 2 A.docx', 2],
+    ['Quiz 2 B.docx', 2],
+  ]);
+});
+
+test('listQuizFiles: aceita o formato dos uploads do servidor (filename)', () => {
+  const lista = listQuizFiles([{ filename: 'Questionário 4.docx', filePath: '/tmp/x' }]);
+
+  assert.equal(lista[0].numero, 4);
+  assert.equal(lista[0].file.filePath, '/tmp/x');
 });

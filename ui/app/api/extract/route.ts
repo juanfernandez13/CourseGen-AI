@@ -9,7 +9,7 @@ import {
   extractAllQuizzes,
 } from '../../../server/extractor';
 import { discardBlobs, downloadToTmp, isRemoteFile, type RemoteFile } from '../../../server/blobStore';
-import { mapQuizFiles } from '../../../server/taskFileMapper';
+import { listQuizFiles } from '../../../server/taskFileMapper';
 
 export const runtime = 'nodejs';
 // Vercel Hobby with Fluid Compute supports up to 300 seconds.
@@ -107,10 +107,12 @@ export async function POST(req: NextRequest) {
 
     /* Número no nome ("Quiz 3", "Questionário 3") define a qual questionário o
      * arquivo pertence; sem número, vale a ordem natural do nome. Antes disso a
-     * associação dependia da ordem de seleção no navegador. */
-    const quizPorNumero = mapQuizFiles(inputs.quizzes);
-    const numerosQuiz = Object.keys(quizPorNumero).map(Number).sort((a, b) => a - b);
-    const quizPaths = numerosQuiz.map(n => quizPorNumero[n][0].filePath);
+     * associação dependia da ordem de seleção no navegador.
+     * Com matriz, um número = um quiz (o primeiro arquivo). Sem matriz — modo "só
+     * questionários" — cada arquivo é um questionário. */
+    const quizEntries = listQuizFiles(inputs.quizzes, { umPorNumero: !!matrizPath });
+    const numerosQuiz = quizEntries.map(q => q.numero);
+    const quizPaths = quizEntries.map(q => q.file.filePath);
 
     // Matriz e quizzes são independentes: execute as chamadas ao Gemini em paralelo.
     const matrizPromise: Promise<Record<string, unknown> | null> = matrizPath
@@ -150,7 +152,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json(data ? { data } : { quizzes: extractedQuizzes });
+    /* Sem matriz, o modo "só questionários" precisa saber a que arquivo e a que
+     * número cada resultado pertence: `arquivos[i]` descreve `quizzes[i]`. */
+    const arquivos = quizEntries.map(q => ({ numero: q.numero, nome: q.file.filename }));
+    return NextResponse.json(data ? { data } : { quizzes: extractedQuizzes, arquivos });
   } catch (error: unknown) {
     console.error('Falha na extração com Gemini:', error);
     const rawMessage = error instanceof Error ? error.message : '';

@@ -1,5 +1,6 @@
 import { authHeaders } from './apiKeys';
 import { blobUploadsAvailable, uploadToBlob } from './uploads';
+import { montarQuestionarios, type QuizArquivo } from '../../server/questionarios';
 
 export type QuizExtraction = { questoes: Array<Record<string, unknown>> };
 
@@ -22,6 +23,15 @@ export async function extractQuizzes(quizFiles: File[]): Promise<QuizExtraction[
   if (quizFiles.length === 0) return [];
   const body = await postExtraction(null, quizFiles);
   return (body.quizzes || []) as QuizExtraction[];
+}
+
+/** Modo "só questionários": o JSON pronto para a revisão, sem passar pela matriz. */
+export async function extractQuestionarios(quizFiles: File[]): Promise<object> {
+  const body = await postExtraction(null, quizFiles);
+  return montarQuestionarios(
+    (body.quizzes || []) as QuizExtraction[],
+    (body.arquivos || []) as QuizArquivo[],
+  );
 }
 
 async function postExtraction(

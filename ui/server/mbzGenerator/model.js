@@ -1,12 +1,15 @@
 'use strict';
 
 const { sanitize, normalizeTitleBrackets, formatNotaBR } = require('./utils');
+const { isQuizOnly, secaoDestino } = require('../questionarios');
 
 /**
  * Normalizes the extraction result and allocates every Moodle identifier.
  * Keeping ID arithmetic here prevents XML writers from inventing offsets.
  */
 function createGenerationModel(matrizData, base) {
+  if (isQuizOnly(matrizData)) return createQuizOnlyModel(matrizData, base);
+
   const disciplina = matrizData.disciplina || {};
   const mural = normalizeMural(matrizData.mural || {});
   const professor = matrizData.professor || {};
@@ -69,6 +72,8 @@ function createGenerationModel(matrizData, base) {
     faltasSectionId: afBase + 3,
     rootCatId: catId,
     courseGradeItemId: catId + 2000,
+    // Aula N → seção N (a 0 é o mural).
+    aulaSectionNumbers: aulas.map((_, i) => i + 1),
     // Uma categoria por item de livro de notas, na ordem declarada.
     categoriaIds:     categorias.map((_, i) => catId + 1000 + i),
     categoriaItemIds: categorias.map((_, i) => catId + 2001 + i),
@@ -104,6 +109,98 @@ function createGenerationModel(matrizData, base) {
   return {
     matrizData, disciplina, mural, professor, aulas, encontros, avFinal, categorias,
     shortname, fullname, blocks, sec0Id, sec0Title, allActivities, allSections, ids,
+  };
+}
+
+/**
+ * Pacote só de questionários, feito para "Mesclar o backup neste curso".
+ *
+ * Por isso NÃO leva nada que pertença ao curso: nem mural, nem blocos, nem
+ * Avaliações/Faltas/Avaliação Final, nem categorias do livro de notas. O Moodle
+ * de destino criaria tudo isso dentro do curso de outra pessoa.
+ *
+ * Cada item de `aulas` é um questionário e `numero` é a seção de destino. Itens
+ * que apontam para a mesma seção dividem uma só seção no backup; os demais
+ * campos do item (fórum, tarefa…) são ignorados de propósito.
+ */
+function createQuizOnlyModel(data, base) {
+  const disciplina = data.disciplina || {};
+  const aulas = (Array.isArray(data.aulas) ? data.aulas : [])
+    .filter(item => item?.quiz)
+    .map((item, i) => {
+      const numero = secaoDestino(item.numero, i);
+      return {
+        numero,
+        titulo: item.quiz.titulo || `Questionário ${numero}`,
+        data_inicio: item.data_inicio,
+        data_fim: item.data_fim,
+        quiz: { ...item.quiz, titulo: item.quiz.titulo || `Questionário ${numero}` },
+      };
+    });
+  if (!aulas.length) throw new Error('Nenhum questionário para exportar.');
+
+  const catId = base + 1;
+  const contextId = base + 2;
+
+  const aulaIds = aulas.map((_, i) => ({
+    sectionId: base + 300 + i * 20,
+    quizId: base + 303 + i * 20,
+    quizCtx: base + 304 + i * 20,
+  }));
+
+  // Uma seção por número de destino; o questionário herda o id da primeira do grupo.
+  const secoes = [];
+  aulas.forEach((aula, i) => {
+    let secao = secoes.find(s => s.numero === aula.numero);
+    if (!secao) {
+      secao = { numero: aula.numero, sectionId: aulaIds[i].sectionId, quizIds: [] };
+      secoes.push(secao);
+    }
+    aulaIds[i].sectionId = secao.sectionId;
+    secao.quizIds.push(aulaIds[i].quizId);
+  });
+  secoes.sort((a, b) => a.numero - b.numero);
+
+  const ids = {
+    base,
+    catId,
+    contextId,
+    aulaIds,
+    encontrosIds: [],
+    rootCatId: catId,
+    courseGradeItemId: catId + 2000,
+    aulaSectionNumbers: aulas.map(aula => aula.numero),
+    categoriaIds: [],
+    categoriaItemIds: [],
+    // Sem categorias: toda nota cai na raiz e o Moodle de destino a reencaixa.
+    gradeCategoryIdFor: () => catId,
+  };
+  ids.gradeSort = buildGradeSort({ categorias: [], ids, aulas, encontros: [] });
+
+  const allActivities = aulas.map((aula, i) =>
+    activity(aulaIds[i].quizId, aulaIds[i].sectionId, 'quiz', aula.quiz.titulo));
+  const allSections = secoes.map(secao => ({
+    sectionid: secao.sectionId,
+    title: secao.numero === 0 ? 'Seção geral (0)' : `Seção ${secao.numero}`,
+    dir: `sections/section_${secao.sectionId}`,
+  }));
+
+  return {
+    quizOnly: true,
+    matrizData: data,
+    disciplina,
+    professor: {},
+    mural: {},
+    aulas,
+    secoes,
+    encontros: [],
+    avFinal: {},
+    categorias: [],
+    shortname: sanitize(disciplina.codigo || 'QUIZZES'),
+    fullname: sanitize(disciplina.nome || 'Questionários'),
+    allActivities,
+    allSections,
+    ids,
   };
 }
 
