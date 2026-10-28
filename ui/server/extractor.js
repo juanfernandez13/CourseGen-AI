@@ -186,38 +186,84 @@ Regras:
 Documentos:
 `;
 
-// Chama Gemini com retry automático em caso de rate limit (429)
-async function geminiGenerate(ai, prompt, maxRetries = 5) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-      });
-      return response;
-    } catch (err) {
-      const body = err.message || '';
-      // Tenta extrair retryDelay do JSON de erro embutido na mensagem
-      let waitMs = 60000; // padrão: 1 min
+const DEFAULT_MODEL = 'gemini-3.8-flash';
+// Usados quando o modelo principal segue indisponível depois das tentativas.
+// Um ID inexistente (404) é pulado, então a lista pode errar sem derrubar nada.
+const DEFAULT_FALLBACK_MODELS = ['gemini-3.5-flash'];
+
+function modelChain() {
+  const lista = (v) => (v || '').split(',').map(s => s.trim()).filter(Boolean);
+  const principal = process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
+  const fallbacks = process.env.GEMINI_FALLBACK_MODELS !== undefined
+    ? lista(process.env.GEMINI_FALLBACK_MODELS)
+    : DEFAULT_FALLBACK_MODELS;
+  return [...new Set([principal, ...fallbacks])];
+}
+
+// O SDK joga o JSON de erro da API dentro de err.message; err.status nem sempre vem.
+function classifyGeminiError(err) {
+  const body = String(err?.message || '');
+  const status = Number(err?.status) || Number(body.match(/"code"\s*:\s*(\d{3})/)?.[1]) || 0;
+  const has = (...s) => s.some(x => body.includes(x));
+
+  const overloaded = status === 503 || status === 500 || status === 504
+    || has('UNAVAILABLE', 'overloaded', 'INTERNAL', 'DEADLINE_EXCEEDED');
+  const rateLimited = status === 429 || has('RESOURCE_EXHAUSTED');
+  const notFound = status === 404 || has('NOT_FOUND');
+
+  let retryAfterMs = 0;
+  try {
+    const info = JSON.parse(body)?.error?.details?.find(d => d['@type']?.includes('RetryInfo'));
+    const secs = parseInt(info?.retryDelay);
+    if (!isNaN(secs)) retryAfterMs = secs * 1000;
+  } catch (_) {}
+
+  return { overloaded, rateLimited, notFound, retryAfterMs, status };
+}
+
+/**
+ * Chama o Gemini tolerando indisponibilidade.
+ *
+ * 503 é sobrecarga do modelo, não erro nosso: esperar 30s fixos e repetir no
+ * mesmo modelo (como era antes) costuma bater na mesma fila. Aqui: poucas
+ * tentativas com backoff exponencial + jitter e, esgotadas, passa para o
+ * próximo modelo da cadeia. Cota (429) também troca de modelo, porque a cota é
+ * por modelo.
+ *
+ * `opts` existe para teste: { models, maxAttempts, sleep, random }.
+ */
+async function geminiGenerate(ai, prompt, opts = {}) {
+  const models = opts.models || modelChain();
+  const maxAttempts = opts.maxAttempts || 3;
+  const sleep = opts.sleep || (ms => new Promise(r => setTimeout(r, ms)));
+  const random = opts.random || Math.random;
+  let lastError;
+
+  for (const model of models) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const parsed = JSON.parse(body);
-        const retryInfo = parsed?.error?.details?.find(d => d['@type']?.includes('RetryInfo'));
-        if (retryInfo?.retryDelay) {
-          const secs = parseInt(retryInfo.retryDelay);
-          if (!isNaN(secs)) waitMs = secs * 1000 + 2000; // +2s de margem
+        return await ai.models.generateContent({ model, contents: prompt });
+      } catch (err) {
+        lastError = err;
+        const c = classifyGeminiError(err);
+        // Modelo inexistente ou fora da conta: não adianta repetir, tenta o próximo.
+        if (c.notFound) { console.warn(`  ⚠ Modelo ${model} indisponível para esta chave (404).`); break; }
+        if (!c.overloaded && !c.rateLimited) throw err;
+
+        const ultima = attempt === maxAttempts;
+        // Cota estourada: a espera sugerida costuma ser longa; melhor outro modelo.
+        if (ultima || (c.rateLimited && c.retryAfterMs > 20000)) {
+          console.warn(`  ⏳ ${model} ${c.status || 'indisponível'}; passando para o próximo modelo.`);
+          break;
         }
-      } catch (_) {}
-
-      const isRetryable = body.includes('429') || body.includes('RESOURCE_EXHAUSTED') || body.includes('quota')
-                       || body.includes('503') || body.includes('UNAVAILABLE');
-      if (!isRetryable || attempt === maxRetries) throw err;
-
-      if (body.includes('503') || body.includes('UNAVAILABLE')) waitMs = 30000; // 503 → espera 30s
-      const waitSec = Math.ceil(waitMs / 1000);
-      console.warn(`  ⏳ Gemini indisponível (${body.includes('503') || body.includes('UNAVAILABLE') ? '503' : '429'}). Aguardando ${waitSec}s (tentativa ${attempt}/${maxRetries})...`);
-      await new Promise(r => setTimeout(r, waitMs));
+        const backoff = Math.min(3000 * 2 ** (attempt - 1), 20000);
+        const waitMs = Math.max(c.retryAfterMs, backoff) + Math.floor(random() * 1000);
+        console.warn(`  ⏳ ${model} ${c.status || 'indisponível'}. Aguardando ${Math.ceil(waitMs / 1000)}s (tentativa ${attempt}/${maxAttempts})...`);
+        await sleep(waitMs);
+      }
     }
   }
+  throw lastError;
 }
 
 async function extractDataWithGemini(fullText, apiKey) {

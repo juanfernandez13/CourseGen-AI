@@ -59,9 +59,11 @@ export async function POST(req: NextRequest) {
 
     const mensagem = bruto.includes('429') || bruto.includes('RESOURCE_EXHAUSTED')
       ? 'O limite de uso do Gemini foi atingido. Tente novamente mais tarde.'
-      : bruto.includes('API key') || bruto.includes('401') || bruto.includes('403')
-        ? 'A chave do Gemini é inválida ou não tem permissão para usar o modelo.'
-        : 'Não foi possível interpretar a planilha.';
+      : bruto.includes('503') || bruto.includes('UNAVAILABLE')
+        ? 'O Gemini está sobrecarregado agora. Aguarde alguns minutos e tente de novo.'
+        : bruto.includes('API key') || bruto.includes('401') || bruto.includes('403')
+          ? 'A chave do Gemini é inválida ou não tem permissão para usar o modelo.'
+          : 'Não foi possível interpretar a planilha.';
     return NextResponse.json({ error: mensagem }, { status: 500 });
   }
 }

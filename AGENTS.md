@@ -34,6 +34,7 @@ ui/server/    núcleo (CommonJS + .d.ts escritos à mão)
 | Variável | Obrigatória | Para quê |
 |---|---|---|
 | `GEMINI_KEY` | fallback | usada quando a requisição não traz `X-Gemini-Key` |
+| `GEMINI_MODEL` / `GEMINI_FALLBACK_MODELS` | não | modelo principal e reservas (vírgula) para 503/cota; padrão `gemini-3.8-flash` → `gemini-3.5-flash` |
 | `BLOB_READ_WRITE_TOKEN` | não | ativa o upload direto para o Vercel Blob |
 | `MOODLE_URL` | não | base do Moodle; sem ela, `https://ead.ifce.edu.br/` |
 | `MOODLE_SESSION_SECRET` | não | cifra o cookie de sessão do Moodle |

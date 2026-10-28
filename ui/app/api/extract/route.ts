@@ -156,6 +156,8 @@ export async function POST(req: NextRequest) {
     const rawMessage = error instanceof Error ? error.message : '';
     const message = rawMessage.includes('429') || rawMessage.includes('RESOURCE_EXHAUSTED')
       ? 'O limite de uso do Gemini foi atingido. Tente novamente mais tarde.'
+      : rawMessage.includes('503') || rawMessage.includes('UNAVAILABLE')
+      ? 'O Gemini está sobrecarregado agora. Tentamos mais de uma vez e mais de um modelo; aguarde alguns minutos e tente de novo.'
       : rawMessage.includes('API key') || rawMessage.includes('401') || rawMessage.includes('403')
         ? 'A chave do Gemini é inválida ou não tem permissão para usar o modelo.'
         : rawMessage.includes('.docx') || rawMessage.includes('storage')
