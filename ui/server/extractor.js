@@ -186,10 +186,19 @@ Regras:
 Documentos:
 `;
 
-const DEFAULT_MODEL = 'gemini-3.8-flash';
+// O 3.5 é o principal: o 3.8 vinha dando 503 com frequência, e cada 503 custava
+// três tentativas lentas antes de a chamada chegar a um modelo que responde.
+const DEFAULT_MODEL = 'gemini-3.5-flash';
 // Usados quando o modelo principal segue indisponível depois das tentativas.
 // Um ID inexistente (404) é pulado, então a lista pode errar sem derrubar nada.
-const DEFAULT_FALLBACK_MODELS = ['gemini-3.5-flash'];
+const DEFAULT_FALLBACK_MODELS = ['gemini-3.8-flash'];
+
+// As rotas têm maxDuration de 300s. O orçamento fica abaixo disso para a rota
+// ainda devolver um erro legível em vez de a Vercel matar a função e o navegador
+// receber um 504 sem corpo.
+const DEFAULT_BUDGET_MS = 240000;
+// Abaixo disso não vale começar uma tentativa: ela seria cortada no meio.
+const MIN_ATTEMPT_MS = 15000;
 
 function modelChain() {
   const lista = (v) => (v || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -206,8 +215,13 @@ function classifyGeminiError(err) {
   const status = Number(err?.status) || Number(body.match(/"code"\s*:\s*(\d{3})/)?.[1]) || 0;
   const has = (...s) => s.some(x => body.includes(x));
 
-  const overloaded = status === 503 || status === 500 || status === 504
-    || has('UNAVAILABLE', 'overloaded', 'INTERNAL', 'DEADLINE_EXCEEDED');
+  // Estouro de prazo (504, ou a nossa própria interrupção por tempo) é outra
+  // coisa que sobrecarga: o pedido é grande ou lento demais, e repeti-lo igual
+  // só gasta o orçamento. Por isso não entra em `overloaded`.
+  const slow = status === 504 || err?.name === 'AbortError' || err?.name === 'TimeoutError'
+    || has('DEADLINE_EXCEEDED', 'operation was aborted');
+  const overloaded = !slow && (status === 503 || status === 500
+    || has('UNAVAILABLE', 'overloaded', 'INTERNAL'));
   const rateLimited = status === 429 || has('RESOURCE_EXHAUSTED');
   const notFound = status === 404 || has('NOT_FOUND');
 
@@ -218,7 +232,7 @@ function classifyGeminiError(err) {
     if (!isNaN(secs)) retryAfterMs = secs * 1000;
   } catch (_) {}
 
-  return { overloaded, rateLimited, notFound, retryAfterMs, status };
+  return { overloaded, slow, rateLimited, notFound, retryAfterMs, status };
 }
 
 /**
@@ -230,24 +244,50 @@ function classifyGeminiError(err) {
  * próximo modelo da cadeia. Cota (429) também troca de modelo, porque a cota é
  * por modelo.
  *
- * `opts` existe para teste: { models, maxAttempts, sleep, random }.
+ * Tudo isso divide um orçamento de tempo (`deadlineAt`, ou `budgetMs` a partir de
+ * agora). Cada tentativa é interrompida quando o orçamento acaba, e sem tempo
+ * para outra tentativa a função desiste com o último erro. Assim a rota responde
+ * antes do `maxDuration` da Vercel. Estouro de prazo (504 ou interrupção nossa)
+ * não é repetido no mesmo modelo: o pedido lento continua lento.
+ *
+ * `opts` existe para teste: { models, maxAttempts, sleep, random, now }. Também
+ * aceita `deadlineAt` (compartilhar um orçamento entre várias chamadas) e
+ * `attemptTimeoutMs` (teto por tentativa; sem ele vale o que resta do orçamento).
  */
 async function geminiGenerate(ai, prompt, opts = {}) {
   const models = opts.models || modelChain();
   const maxAttempts = opts.maxAttempts || 3;
   const sleep = opts.sleep || (ms => new Promise(r => setTimeout(r, ms)));
   const random = opts.random || Math.random;
+  const now = opts.now || Date.now;
+  const deadlineAt = opts.deadlineAt ?? now() + (opts.budgetMs || DEFAULT_BUDGET_MS);
   let lastError;
 
   for (const model of models) {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const left = deadlineAt - now();
+      if (left < MIN_ATTEMPT_MS) {
+        console.warn('  ⏳ Orçamento de tempo esgotado; desistindo.');
+        throw lastError || new Error('DEADLINE_EXCEEDED: o tempo para falar com o Gemini acabou.');
+      }
+      const timeoutMs = Math.min(left, opts.attemptTimeoutMs || left);
       try {
-        return await ai.models.generateContent({ model, contents: prompt });
+        return await ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: { abortSignal: AbortSignal.timeout(timeoutMs) },
+        });
       } catch (err) {
-        lastError = err;
         const c = classifyGeminiError(err);
+        lastError = c.slow && !c.status
+          ? new Error(`DEADLINE_EXCEEDED: ${model} não respondeu em ${Math.round(timeoutMs / 1000)}s.`)
+          : err;
         // Modelo inexistente ou fora da conta: não adianta repetir, tenta o próximo.
         if (c.notFound) { console.warn(`  ⚠ Modelo ${model} indisponível para esta chave (404).`); break; }
+        if (c.slow) {
+          console.warn(`  ⏳ ${model} estourou o prazo (${c.status || `${Math.round(timeoutMs / 1000)}s`}); passando para o próximo modelo.`);
+          break;
+        }
         if (!c.overloaded && !c.rateLimited) throw err;
 
         const ultima = attempt === maxAttempts;
@@ -258,6 +298,11 @@ async function geminiGenerate(ai, prompt, opts = {}) {
         }
         const backoff = Math.min(3000 * 2 ** (attempt - 1), 20000);
         const waitMs = Math.max(c.retryAfterMs, backoff) + Math.floor(random() * 1000);
+        // Dormir comeria o que resta para a próxima tentativa: desiste já.
+        if (deadlineAt - now() - waitMs < MIN_ATTEMPT_MS) {
+          console.warn(`  ⏳ ${model} ${c.status || 'indisponível'} e sem tempo para esperar; desistindo.`);
+          throw lastError;
+        }
         console.warn(`  ⏳ ${model} ${c.status || 'indisponível'}. Aguardando ${Math.ceil(waitMs / 1000)}s (tentativa ${attempt}/${maxAttempts})...`);
         await sleep(waitMs);
       }
@@ -311,17 +356,53 @@ ${part2}`);
   return mergeMatrizData(data1, data2);
 }
 
-async function extractAllQuizzes(filePaths, apiKey) {
-  const { GoogleGenAI } = require('@google/genai');
-  const ai = new GoogleGenAI({ apiKey });
+// Poucas chamadas ao mesmo tempo: a cota gratuita limita pedidos por minuto, e
+// abrir uma por arquivo de uma vez trocaria o 503 por 429.
+const QUIZ_CONCURRENCY = 4;
+// Um questionário cabe em bem menos que isso; passar daqui é o modelo travado.
+const QUIZ_ATTEMPT_TIMEOUT_MS = 90000;
 
-  const texts = await Promise.all(filePaths.map(fp => processMatriz(fp)));
-  const combined = texts.map((t, i) => `=== QUIZ ${i + 1} ===\n${t}`).join('\n\n');
+async function mapWithLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  let failed = false;
+  const worker = async () => {
+    while (!failed && next < items.length) {
+      const i = next++;
+      try { out[i] = await fn(items[i], i); } catch (err) { failed = true; throw err; }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
 
-  const response = await geminiGenerate(ai, PROMPT_QUIZ_BATCH + combined);
-  const json = cleanJSON(response.text);
-  const parsed = safeParseJSON(json, 'quizzes-batch');
-  return parsed.quizzes || [];
+/**
+ * Uma chamada por arquivo, e não uma só com todos: a saída é a transcrição
+ * literal de cada questão, então ela crescia com o número de arquivos e uma
+ * chamada longa é a que mais leva 503/504. Por arquivo o pedido fica curto, o
+ * resultado continua alinhado a `filePaths` e uma repetição custa pouco.
+ *
+ * `deps` existe para teste: { ai, readText, gemini }.
+ */
+async function extractAllQuizzes(filePaths, apiKey, deps = {}) {
+  const ai = deps.ai || new (require('@google/genai').GoogleGenAI)({ apiKey });
+  const readText = deps.readText || processMatriz;
+  const gemini = deps.gemini || {};
+  const now = gemini.now || Date.now;
+  // Um orçamento só para o lote todo: com 4 de cada vez, muitos arquivos não
+  // podem somar tempo além do que a rota aguenta.
+  const deadlineAt = gemini.deadlineAt ?? now() + DEFAULT_BUDGET_MS;
+
+  return mapWithLimit(filePaths, QUIZ_CONCURRENCY, async (filePath, i) => {
+    const text = await readText(filePath);
+    const response = await geminiGenerate(ai, `${PROMPT_QUIZ_BATCH}=== QUIZ 1 ===\n${text}`, {
+      attemptTimeoutMs: QUIZ_ATTEMPT_TIMEOUT_MS,
+      ...gemini,
+      deadlineAt,
+    });
+    const parsed = safeParseJSON(cleanJSON(response.text), `quiz-${i + 1}`);
+    return parsed.quizzes?.[0] || { questoes: [] };
+  });
 }
 
 function mergeMatrizData(a, b) {

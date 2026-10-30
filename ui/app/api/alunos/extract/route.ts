@@ -59,6 +59,8 @@ export async function POST(req: NextRequest) {
 
     const mensagem = bruto.includes('429') || bruto.includes('RESOURCE_EXHAUSTED')
       ? 'O limite de uso do Gemini foi atingido. Tente novamente mais tarde.'
+      : bruto.includes('504') || bruto.includes('DEADLINE_EXCEEDED')
+      ? 'O Gemini demorou demais para responder. Tente de novo em instantes.'
       : bruto.includes('503') || bruto.includes('UNAVAILABLE')
         ? 'O Gemini está sobrecarregado agora. Aguarde alguns minutos e tente de novo.'
         : bruto.includes('API key') || bruto.includes('401') || bruto.includes('403')
