@@ -225,6 +225,16 @@ function classifyGeminiError(err) {
   const rateLimited = status === 429 || has('RESOURCE_EXHAUSTED');
   const notFound = status === 404 || has('NOT_FOUND');
 
+  // Conexão derrubada no meio da resposta (undici: "TypeError: terminated",
+  // causa ECONNRESET). Em produção foi o que matou a extração de um quiz depois
+  // de ~60s, e como não era 503/504/429 o erro subia sem nenhuma repetição.
+  // Só conta como rede o que tem cara de rede: um TypeError nosso não entra.
+  const REDE = ['ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'EPIPE', 'ENOTFOUND', 'EAI_AGAIN',
+    'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'UND_ERR_CONNECT_TIMEOUT'];
+  const codigo = err?.cause?.code || err?.code;
+  const network = !slow && (REDE.includes(codigo) || has(...REDE)
+    || (err?.name === 'TypeError' && /^(terminated|fetch failed)$/i.test(String(err?.message).trim())));
+
   let retryAfterMs = 0;
   try {
     const info = JSON.parse(body)?.error?.details?.find(d => d['@type']?.includes('RetryInfo'));
@@ -232,7 +242,7 @@ function classifyGeminiError(err) {
     if (!isNaN(secs)) retryAfterMs = secs * 1000;
   } catch (_) {}
 
-  return { overloaded, slow, rateLimited, notFound, retryAfterMs, status };
+  return { overloaded, slow, network, rateLimited, notFound, retryAfterMs, status };
 }
 
 /**
@@ -272,11 +282,18 @@ async function geminiGenerate(ai, prompt, opts = {}) {
       }
       const timeoutMs = Math.min(left, opts.attemptTimeoutMs || left);
       try {
-        return await ai.models.generateContent({
+        // Em fluxo (stream) e não numa resposta só: sem streaming o Gemini não
+        // manda um byte até terminar de gerar, e uma geração longa fica minutos
+        // numa conexão muda, que acaba derrubada (ECONNRESET). Com chunks
+        // chegando a conexão fica viva. O retorno continua sendo { text }.
+        const stream = await ai.models.generateContentStream({
           model,
           contents: prompt,
           config: { abortSignal: AbortSignal.timeout(timeoutMs) },
         });
+        let text = '';
+        for await (const chunk of stream) text += chunk.text ?? '';
+        return { text };
       } catch (err) {
         const c = classifyGeminiError(err);
         lastError = c.slow && !c.status
@@ -288,22 +305,23 @@ async function geminiGenerate(ai, prompt, opts = {}) {
           console.warn(`  ⏳ ${model} estourou o prazo (${c.status || `${Math.round(timeoutMs / 1000)}s`}); passando para o próximo modelo.`);
           break;
         }
-        if (!c.overloaded && !c.rateLimited) throw err;
+        if (!c.overloaded && !c.rateLimited && !c.network) throw err;
 
+        const rotulo = c.status || (c.network ? 'conexão caiu' : 'indisponível');
         const ultima = attempt === maxAttempts;
         // Cota estourada: a espera sugerida costuma ser longa; melhor outro modelo.
         if (ultima || (c.rateLimited && c.retryAfterMs > 20000)) {
-          console.warn(`  ⏳ ${model} ${c.status || 'indisponível'}; passando para o próximo modelo.`);
+          console.warn(`  ⏳ ${model} ${rotulo}; passando para o próximo modelo.`);
           break;
         }
         const backoff = Math.min(3000 * 2 ** (attempt - 1), 20000);
         const waitMs = Math.max(c.retryAfterMs, backoff) + Math.floor(random() * 1000);
         // Dormir comeria o que resta para a próxima tentativa: desiste já.
         if (deadlineAt - now() - waitMs < MIN_ATTEMPT_MS) {
-          console.warn(`  ⏳ ${model} ${c.status || 'indisponível'} e sem tempo para esperar; desistindo.`);
+          console.warn(`  ⏳ ${model} ${rotulo} e sem tempo para esperar; desistindo.`);
           throw lastError;
         }
-        console.warn(`  ⏳ ${model} ${c.status || 'indisponível'}. Aguardando ${Math.ceil(waitMs / 1000)}s (tentativa ${attempt}/${maxAttempts})...`);
+        console.warn(`  ⏳ ${model} ${rotulo}. Aguardando ${Math.ceil(waitMs / 1000)}s (tentativa ${attempt}/${maxAttempts})...`);
         await sleep(waitMs);
       }
     }

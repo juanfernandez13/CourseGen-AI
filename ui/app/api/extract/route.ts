@@ -163,6 +163,8 @@ export async function POST(req: NextRequest) {
       ? 'O limite de uso do Gemini foi atingido. Tente novamente mais tarde.'
       : rawMessage.includes('504') || rawMessage.includes('DEADLINE_EXCEEDED')
       ? 'O Gemini demorou demais para responder. Tente de novo; se continuar, envie menos arquivos de cada vez.'
+      : rawMessage.includes('terminated') || rawMessage.includes('fetch failed') || rawMessage.includes('ECONNRESET')
+      ? 'A conexão com o Gemini caiu no meio da resposta. Tentamos de novo mais de uma vez; tente outra vez em instantes.'
       : rawMessage.includes('503') || rawMessage.includes('UNAVAILABLE')
       ? 'O Gemini está sobrecarregado agora. Tentamos mais de uma vez e mais de um modelo; aguarde alguns minutos e tente de novo.'
       : rawMessage.includes('API key') || rawMessage.includes('401') || rawMessage.includes('403')

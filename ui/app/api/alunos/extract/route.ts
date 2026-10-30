@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
       ? 'O limite de uso do Gemini foi atingido. Tente novamente mais tarde.'
       : bruto.includes('504') || bruto.includes('DEADLINE_EXCEEDED')
       ? 'O Gemini demorou demais para responder. Tente de novo em instantes.'
+      : bruto.includes('terminated') || bruto.includes('fetch failed') || bruto.includes('ECONNRESET')
+      ? 'A conexão com o Gemini caiu no meio da resposta. Tente de novo em instantes.'
       : bruto.includes('503') || bruto.includes('UNAVAILABLE')
         ? 'O Gemini está sobrecarregado agora. Aguarde alguns minutos e tente de novo.'
         : bruto.includes('API key') || bruto.includes('401') || bruto.includes('403')

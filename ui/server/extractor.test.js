@@ -12,17 +12,28 @@ const erro429 = (retryDelay) => new Error(JSON.stringify({
   error: { code: 429, status: 'RESOURCE_EXHAUSTED', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay }] },
 }));
 
-/** ai falso: cada item de `respostas` é o que o modelo devolve na N-ésima chamada. */
+/** Fluxo falso: cada string de `partes` vira um chunk; `falhaDepois` estoura no fim. */
+function fluxo({ partes, falhaDepois }) {
+  return (async function* () {
+    for (const text of partes) yield { text };
+    if (falhaDepois) throw falhaDepois;
+  })();
+}
+
+/**
+ * ai falso: cada item de `respostas` é o que o modelo devolve na N-ésima chamada.
+ * `{ text }` chega em um chunk só; `{ partes, falhaDepois }` simula o fluxo real.
+ */
 function aiFalso(respostas) {
   const chamadas = [];
   return {
     chamadas,
     models: {
-      async generateContent({ model }) {
+      async generateContentStream({ model }) {
         chamadas.push(model);
         const r = respostas[chamadas.length - 1];
         if (r instanceof Error) throw r;
-        return r;
+        return fluxo(r.partes ? r : { partes: [r.text] });
       },
     },
   };
@@ -102,7 +113,7 @@ test('interrupção por tempo (AbortError) também troca de modelo, com erro leg
 
 test('cada tentativa leva um AbortSignal limitado pelo que resta do orçamento', async () => {
   const sinais = [];
-  const ai = { models: { async generateContent(p) { sinais.push(p.config.abortSignal); return { text: 'ok' }; } } };
+  const ai = { models: { async generateContentStream(p) { sinais.push(p.config.abortSignal); return fluxo({ partes: ['ok'] }); } } };
   await geminiGenerate(ai, 'p', opts({ budgetMs: 60000, attemptTimeoutMs: 1000 }));
   assert.equal(sinais.length, 1);
   assert.ok(sinais[0] instanceof AbortSignal);
@@ -130,12 +141,12 @@ test('extractAllQuizzes: uma chamada por arquivo, resultado na ordem dos arquivo
   const prompts = [];
   const ai = {
     models: {
-      async generateContent({ contents }) {
+      async generateContentStream({ contents }) {
         prompts.push(contents);
         const n = contents.match(/texto-(\d)/)[1];
         // Quem tem número menor responde por último, para provar que a ordem vem do índice.
         await new Promise(r => setTimeout(r, (4 - Number(n)) * 10));
-        return { text: JSON.stringify({ quizzes: [{ questoes: [{ numero: Number(n) }] }] }) };
+        return fluxo({ partes: [JSON.stringify({ quizzes: [{ questoes: [{ numero: Number(n) }] }] })] });
       },
     },
   };
@@ -147,7 +158,7 @@ test('extractAllQuizzes: uma chamada por arquivo, resultado na ordem dos arquivo
 });
 
 test('extractAllQuizzes: resposta sem questionário vira lista vazia, não quebra o alinhamento', async () => {
-  const ai = { models: { async generateContent() { return { text: '{"quizzes": []}' }; } } };
+  const ai = { models: { async generateContentStream() { return fluxo({ partes: ['{"quizzes": []}'] }); } } };
   const r = await extractAllQuizzes(['1'], 'k', { ai, readText: async () => 'texto' });
   assert.deepEqual(r, [{ questoes: [] }]);
 });
@@ -156,7 +167,7 @@ test('extractAllQuizzes: falha de um arquivo falha o lote e para de abrir chamad
   let chamadas = 0;
   const ai = {
     models: {
-      async generateContent() {
+      async generateContentStream() {
         chamadas++;
         throw new Error('{"error":{"code":403,"message":"API key not valid"}}');
       },
@@ -165,4 +176,40 @@ test('extractAllQuizzes: falha de um arquivo falha o lote e para de abrir chamad
   const arquivos = Array.from({ length: 10 }, (_, i) => String(i));
   await assert.rejects(extractAllQuizzes(arquivos, 'k', { ai, readText: async () => 'texto' }), /API key/);
   assert.ok(chamadas <= 4, `fez ${chamadas} chamadas`);
+});
+
+/** O que o undici lança quando a conexão cai no meio da resposta. */
+const erroRede = () => Object.assign(new TypeError('terminated'), {
+  cause: Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' }),
+});
+
+test('os chunks do fluxo são concatenados na ordem', async () => {
+  const ai = aiFalso([{ partes: ['{"a":', ' 1', '}'] }]);
+  const r = await geminiGenerate(ai, 'p', opts());
+  assert.equal(r.text, '{"a": 1}');
+});
+
+test('conexão derrubada (terminated/ECONNRESET) é repetida, não sobe na hora', async () => {
+  const ai = aiFalso([erroRede(), { text: 'ok' }]);
+  const r = await geminiGenerate(ai, 'p', opts());
+  assert.equal(r.text, 'ok');
+  assert.deepEqual(ai.chamadas, ['a', 'a']);
+});
+
+test('conexão que cai no meio do fluxo também é repetida, sem aproveitar o pedaço', async () => {
+  const ai = aiFalso([{ partes: ['{"a":'], falhaDepois: erroRede() }, { partes: ['{"a": 1}'] }]);
+  const r = await geminiGenerate(ai, 'p', opts());
+  assert.equal(r.text, '{"a": 1}');
+});
+
+test('rede caindo sempre: troca de modelo e, no fim, lança o erro de rede', async () => {
+  const ai = aiFalso(Array.from({ length: 6 }, erroRede));
+  await assert.rejects(geminiGenerate(ai, 'p', opts()), /terminated/);
+  assert.deepEqual(ai.chamadas, ['a', 'a', 'a', 'b', 'b', 'b']);
+});
+
+test('TypeError que não é de rede (bug nosso) falha na hora', async () => {
+  const ai = aiFalso([new TypeError("Cannot read properties of undefined (reading 'x')")]);
+  await assert.rejects(geminiGenerate(ai, 'p', opts()), /Cannot read/);
+  assert.deepEqual(ai.chamadas, ['a']);
 });
