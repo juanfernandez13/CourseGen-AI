@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { geminiGenerate, extractAllQuizzes } = require('./extractor');
+const { geminiGenerate, extractAllQuizzes, modelChain } = require('./extractor');
 
 const erro503 = () => Object.assign(
   new Error('{"error":{"code":503,"message":"The model is overloaded.","status":"UNAVAILABLE"}}'),
@@ -212,4 +212,19 @@ test('TypeError que não é de rede (bug nosso) falha na hora', async () => {
   const ai = aiFalso([new TypeError("Cannot read properties of undefined (reading 'x')")]);
   await assert.rejects(geminiGenerate(ai, 'p', opts()), /Cannot read/);
   assert.deepEqual(ai.chamadas, ['a']);
+});
+
+test('cadeia padrão: 3.5, depois o lite, e o 3.8 por último', () => {
+  const antes = { m: process.env.GEMINI_MODEL, f: process.env.GEMINI_FALLBACK_MODELS };
+  delete process.env.GEMINI_MODEL;
+  delete process.env.GEMINI_FALLBACK_MODELS;
+  try {
+    assert.deepEqual(modelChain(), ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash']);
+    process.env.GEMINI_MODEL = 'x';
+    process.env.GEMINI_FALLBACK_MODELS = 'y, z';
+    assert.deepEqual(modelChain(), ['x', 'y', 'z']);
+  } finally {
+    if (antes.m === undefined) delete process.env.GEMINI_MODEL; else process.env.GEMINI_MODEL = antes.m;
+    if (antes.f === undefined) delete process.env.GEMINI_FALLBACK_MODELS; else process.env.GEMINI_FALLBACK_MODELS = antes.f;
+  }
 });

@@ -186,12 +186,18 @@ Regras:
 Documentos:
 `;
 
-// O 3.5 é o principal: o 3.8 vinha dando 503 com frequência, e cada 503 custava
-// três tentativas lentas antes de a chamada chegar a um modelo que responde.
+// Medido com a chave de produção em 30/10/2026 (chamadas diretas, em fluxo):
+// - 3.5-flash: respondia sempre a pedidos pequenos, mas dava 503 em ~3 de 4
+//   pedidos de saída grande (um quiz transcrito), em 3-5s, e ~19s quando passava.
+// - 3.5-flash-lite: 2 de 2 saídas grandes (~4,5-5 mil tokens) em 13-15s, sem 503.
+// - 3.8-flash: 88s para devolver 149 tokens e mais de 120s no pedido padrão, ou
+//   seja, ficava na fila. Como principal ele estourava o prazo de toda extração.
+// Por isso: 3.5 primeiro, o lite assume quando o 3.5 segue em 503, e o 3.8 só
+// por último. Quem ficar preso em ECONNRESET/504 também cai nessa cadeia.
 const DEFAULT_MODEL = 'gemini-3.5-flash';
 // Usados quando o modelo principal segue indisponível depois das tentativas.
 // Um ID inexistente (404) é pulado, então a lista pode errar sem derrubar nada.
-const DEFAULT_FALLBACK_MODELS = ['gemini-3.8-flash'];
+const DEFAULT_FALLBACK_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.8-flash'];
 
 // As rotas têm maxDuration de 300s. O orçamento fica abaixo disso para a rota
 // ainda devolver um erro legível em vez de a Vercel matar a função e o navegador
@@ -519,4 +525,4 @@ function safeParseJSON(json, label) {
   }
 }
 
-module.exports = { PROMPT_SCHEMA, PROMPT_QUIZ_BATCH, cleanJSON, safeParseJSON, geminiGenerate, extractDataWithGemini, extractAllQuizzes, mergeMatrizData };
+module.exports = { PROMPT_SCHEMA, PROMPT_QUIZ_BATCH, cleanJSON, safeParseJSON, modelChain, geminiGenerate, extractDataWithGemini, extractAllQuizzes, mergeMatrizData };
